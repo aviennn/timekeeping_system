@@ -13,14 +13,12 @@ class Employee(models.Model):
     password = models.CharField(max_length=100, editable=False)
 
     def save(self, *args, **kwargs):
-        # Generate the username if it is not already set
         if not self.username:
             year = self.joined_date.year
             self.username = f"{year}{self.last_name}{self.first_name}".replace(" ", "")
         
-        # Generate the password (default to username for simplicity)
         if not self.password:
-            self.password = self.username  # Alternatively, implement more secure password generation
+            self.password = self.username  
 
         super().save(*args, **kwargs)
 
