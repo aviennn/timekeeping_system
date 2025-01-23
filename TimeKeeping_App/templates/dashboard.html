@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TimeKeeping</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <style>
+        body { margin: 20px; font-family: Arial; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        #clock { font-size: 20px; margin: 15px 0; }
+        .btn { 
+            padding: 8px 15px; 
+            margin: 5px; 
+            color: rgb(5, 5, 5); 
+            border: none; 
+            cursor: pointer; 
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px; border: 1px solid #080808; text-align: left; }
+        .disabled { opacity: 0.5; pointer-events: none; }
+
+        select, .password-container input[type="password"], .password-container input[type="text"] {
+            width: 50%;
+            padding: 8px;
+            box-sizing: border-box;
+            height: 40px;  
+        }
+
+        .password-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .eye-icon {
+            position: absolute;
+            right: 610px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 18px; 
+        }
+
+
+    </style>
+    <script>
+        function updateClock() {
+            const options = { 
+                dateStyle: 'full',
+                timeStyle: 'medium',
+                timeZone: 'Asia/Manila'
+            };
+            document.getElementById('clock').textContent = 
+                new Date().toLocaleString('en-US', options);
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            setInterval(updateClock, 1000);
+            updateClock();
+        });
+
+        function togglePassword() {
+            const passwordField = document.getElementById('password');
+            const eyeIcon = document.getElementById('eye-icon');
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                eyeIcon.classList.replace('fa-eye', 'fa-eye-slash'); 
+            } else {
+                passwordField.type = 'password';
+                eyeIcon.classList.replace('fa-eye-slash', 'fa-eye'); 
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div id="clock"></div>
+
+        {% if not current_employee %}
+        <form method="post">
+            {% csrf_token %}
+            <select name="employee" required>
+                <option value="">Select Employee</option>
+                {% for employee in employees %}
+                <option value="{{ employee.id }}">{{ employee.username }}</option>
+                {% endfor %}
+            </select>
+            <div class="password-container">
+                <input type="password" id="password" name="password" required>
+                <i id="eye-icon" class="fas fa-eye eye-icon" onclick="togglePassword()"></i>
+            </div>            
+            <button type="submit">Login</button>
+        </form>
+        {% endif %}
+
+        {% if current_employee %}
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="employee" value="{{ current_employee.id }}">
+            <input type="hidden" name="password" value="{{ current_employee.password }}">
+            <button class="btn" name="action" value="morning_in">Morning In</button>
+            <button class="btn" name="action" value="morning_out">Morning Out</button>
+            <button class="btn" name="action" value="afternoon_in">Afternoon In</button>
+            <button class="btn" name="action" value="afternoon_out">Afternoon Out</button>
+        </form>
+
+        <table>
+            <tr>
+                <th>Name</th>
+                <th>Date</th>
+                <th>Morning In</th>
+                <th>Morning Out</th>
+                <th>Lunch Break Hours</th>
+                <th>Afternoon In</th>
+                <th>Afternoon Out</th>
+                <th>Total Hours</th>
+            </tr>
+            {% for record in time_records %}
+            <tr>
+                <td>{{ record.employee.username }}</td>
+                <td>{{ record.date }}</td>
+                <td>{{ record.morning_time_in|time:"g:i:s A" }}</td>
+                <td>{{ record.morning_time_out|time:"g:i:s A" }}</td>
+                <td>{{ record.lunch_break_hours }}</td>
+                <td>{{ record.afternoon_time_in|time:"g:i:s A" }}</td>
+                <td>{{ record.afternoon_time_out|time:"g:i:s A" }}</td>
+                <td>{{ record.total_hours }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        <a href="{% url 'export_pdf' %}" class="btn">Export to PDF</a>
+
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn">Logout</button>
+        </form>
+        {% endif %}
+    </div>
+</body>
+</html>
