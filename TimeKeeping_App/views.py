@@ -64,7 +64,6 @@ def export_pdf(request):
     
     p = canvas.Canvas(response, pagesize=letter)
     
-    # Retrieve the logged-in employee from the session
     current_employee_id = request.session.get('current_employee_id')
     
     if current_employee_id:
@@ -73,7 +72,6 @@ def export_pdf(request):
             records = TimeRecord.objects.filter(employee=current_employee)
             
             y = 750
-            # Concatenate first and last names for the employee
             full_name = f"{current_employee.first_name} {current_employee.last_name}"
             p.drawString(100, y, f"Time Records for {full_name}")
             y -= 30
