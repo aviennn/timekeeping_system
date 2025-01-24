@@ -1,24 +1,50 @@
-<h1>List of employees</h1>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+</head>
+<body>
+    <h1>Admin Dashboard</h1>
 
-<table>
-    <tr>
-        <th>Username</th>
-        <th>First Name</th>
-        <th>Middle Name</th>
-        <th>Last Name</th>
-        <th>Email</th>
-        <th>Date Joined</th>
-        <th>Actions</th>
-    </tr>
-    {% for employee in employee %}
-    <tr>
-        <td>{{ employee.username }}</td>
-        <td>{{ employee.first_name }}</td>
-        <td>{{ employee.middle_name }}</td>
-        <td>{{ employee.last_name }}</td>
-        <td>{{ employee.email }}</td>
-        <td>{{ employee.joined_date }}</td>
-        <td><a href = "{% url 'view_records' employee.id %}"><button>View Records</button></a></td>
-    </tr>
-    {% endfor %}
-</table>
+    {% if is_authenticated %}
+        <h2>Welcome, {{ user.username }}!</h2>
+        <h3>List of Employees</h3>
+        <table>
+            <tr>
+                <th>Username</th>
+                <th>First Name</th>
+                <th>Middle Name</th>
+                <th>Last Name</th>
+                <th>Email</th>
+                <th>Date Joined</th>
+                <th>Actions</th>
+            </tr>
+            {% for employee in employees %}
+            <tr>
+                <td>{{ employee.username }}</td>
+                <td>{{ employee.first_name }}</td>
+                <td>{{ employee.middle_name }}</td>
+                <td>{{ employee.last_name }}</td>
+                <td>{{ employee.email }}</td>
+                <td>{{ employee.joined_date }}</td>
+                <td><a href="{% url 'view_records' employee.id %}"><button>View Records</button></a></td>
+            </tr>
+            {% endfor %}
+        </table>
+        <form method="post" action="{% url 'logout_admin' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn">Logout</button>
+        </form>
+    {% else %}
+        <p>You are not logged in. Please log in.</p>
+        <form method="post" action="{% url 'admin_dashboard' %}">
+            {% csrf_token %}
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+            <button type="submit">Login</button>
+        </form>
+    {% endif %}
+</body>
+</html>

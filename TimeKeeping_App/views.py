@@ -9,6 +9,9 @@ from reportlab.pdfgen import canvas
 from django.shortcuts import redirect
 from django.views import View
 from django.shortcuts import render, get_object_or_404
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.mixins import UserPassesTestMixin
+from django.http import HttpResponseForbidden
 
 def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
@@ -102,11 +105,37 @@ def logout_view(request):
     return redirect('dashboard')
 
 def admin_dashboard(request):
-    employee = Employee.objects.all()
-    return render(request, 'admin_dashboard.html',{'employee': employee})
+    error_message = None
+    employees = Employee.objects.all()  
 
-class EmployeeRecord(View):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('admin_dashboard')
+        else:
+            error_message = "Invalid username or password."
+
+    return render(request, 'admin_dashboard.html', {
+        'employees': employees, 
+        'is_authenticated': request.user.is_authenticated,
+        'error_message': error_message,
+    })
+
+class EmployeeRecord(UserPassesTestMixin, View):
+    def test_func(self):
+        return self.request.user.is_superuser
+
+    def handle_no_permission(self):
+        return HttpResponseForbidden("You do not have permission to access this page.")
+
     def get(self, request, pk):
         employee = get_object_or_404(Employee, pk=pk)
         time_records = TimeRecord.objects.filter(employee=employee)
         return render(request, "view_records.html", {"employee": employee, "time_records": time_records})
+    
+def logout_admin(request):
+    request.session.flush()  
+    return redirect('admin_dashboard')
