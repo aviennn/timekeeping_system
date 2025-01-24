@@ -7,6 +7,8 @@ from datetime import datetime
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from django.shortcuts import redirect
+from django.views import View
+from django.shortcuts import render, get_object_or_404
 
 def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
@@ -98,3 +100,13 @@ def export_pdf(request):
 def logout_view(request):
     request.session.flush()  
     return redirect('dashboard')
+
+def admin_dashboard(request):
+    employee = Employee.objects.all()
+    return render(request, 'admin_dashboard.html',{'employee': employee})
+
+class EmployeeRecord(View):
+    def get(self, request, pk):
+        employee = get_object_or_404(Employee, pk=pk)
+        time_records = TimeRecord.objects.filter(employee=employee)
+        return render(request, "view_records.html", {"employee": employee, "time_records": time_records})
