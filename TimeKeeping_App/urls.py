@@ -7,4 +7,5 @@ urlpatterns = [
     path('export-pdf/', views.export_pdf, name='export_pdf'),
     path('logout/', views.logout_view, name='logout'),
     path('view_records/<int:pk>/', views.EmployeeRecord.as_view(), name='view_records'),  
+    path('logout-admin/', views.logout_admin, name='logout_admin'),
 ]
