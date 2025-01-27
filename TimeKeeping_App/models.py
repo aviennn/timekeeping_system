@@ -15,7 +15,9 @@ class Employee(models.Model):
     def save(self, *args, **kwargs):
         if not self.username:
             year = self.joined_date.year
-            self.username = f"{year}{self.last_name}{self.first_name}".replace(" ", "")
+            super().save(*args, **kwargs)
+            formatted_id = f"{self.id:04d}"
+            self.username = f"{year}-{self.last_name}{self.first_name}-{formatted_id}".replace(" ", "")
         
         if not self.password:
             self.password = self.username  
@@ -29,36 +31,48 @@ class Employee(models.Model):
 class TimeRecord(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
     date = models.DateField(default=timezone.now)
-    morning_time_in = models.TimeField(null=True, blank=True)
-    morning_time_out = models.TimeField(null=True, blank=True)
-    afternoon_time_in = models.TimeField(null=True, blank=True)
-    afternoon_time_out = models.TimeField(null=True, blank=True)
+    clock_in = models.TimeField(null=True, blank=True)
+    clock_out = models.TimeField(null=True, blank=True)
+    lunch_start = models.TimeField(null=True, blank=True)
+    lunch_end = models.TimeField(null=True, blank=True)
 
     @property
-    def lunch_break_hours(self):
-        if self.morning_time_out and self.afternoon_time_in:
-            morning_out = datetime.combine(self.date, self.morning_time_out)
-            afternoon_in = datetime.combine(self.date, self.afternoon_time_in)
-            difference = afternoon_in - morning_out
-            return round(difference.seconds / 3600, 2)
-        return 0
+    def lunch_break_duration(self):
+        if self.lunch_start and self.lunch_end:
+            lunch_start_dt = datetime.combine(self.date, self.lunch_start)
+            lunch_end_dt = datetime.combine(self.date, self.lunch_end)
+            duration = lunch_end_dt - lunch_start_dt
+            total_minutes = duration.total_seconds() / 60
+            hours = int(total_minutes // 60)
+            minutes = int(total_minutes % 60)
+            
+            if hours > 0:
+                return f"{hours} hour{'s' if hours != 1 else ''} {minutes} minute{'s' if minutes != 1 else ''}"
+            return f"{minutes} minute{'s' if minutes != 1 else ''}"
+        return None
 
     @property
     def total_hours(self):
-        total = 0
-        if self.morning_time_in and self.morning_time_out:
-            morning = (
-                timezone.datetime.combine(self.date, self.morning_time_out)
-                - timezone.datetime.combine(self.date, self.morning_time_in)
-            )
-            total += morning.seconds / 3600
-        if self.afternoon_time_in and self.afternoon_time_out:
-            afternoon = (
-                timezone.datetime.combine(self.date, self.afternoon_time_out)
-                - timezone.datetime.combine(self.date, self.afternoon_time_in)
-            )
-            total += afternoon.seconds / 3600
-        return round(total, 2)
+        if self.clock_in and self.clock_out:
+            clock_in_dt = datetime.combine(self.date, self.clock_in)
+            clock_out_dt = datetime.combine(self.date, self.clock_out)
+            duration = clock_out_dt - clock_in_dt
+            
+            # Subtract lunch break if it exists
+            if self.lunch_start and self.lunch_end:
+                lunch_start_dt = datetime.combine(self.date, self.lunch_start)
+                lunch_end_dt = datetime.combine(self.date, self.lunch_end)
+                lunch_duration = lunch_end_dt - lunch_start_dt
+                duration = duration - lunch_duration
+            
+            total_minutes = duration.total_seconds() / 60
+            hours = int(total_minutes // 60)
+            minutes = int(total_minutes % 60)
+            
+            if hours > 0:
+                return f"{hours} hour{'s' if hours != 1 else ''} {minutes} minute{'s' if minutes != 1 else ''}"
+            return f"{minutes} minute{'s' if minutes != 1 else ''}"
+        return None
 
     def __str__(self):
         return f"TimeRecord for {self.employee} on {self.date}"

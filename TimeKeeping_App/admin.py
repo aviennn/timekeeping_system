@@ -9,7 +9,7 @@ class EmployeeAdmin(admin.ModelAdmin):
     readonly_fields = ('username', 'password')
 
 class TimeRecordAdmin(admin.ModelAdmin):
-    list_display = ('employee', 'date', 'morning_time_in', 'morning_time_out', 'afternoon_time_in', 'afternoon_time_out')
+    list_display = ('employee', 'date', 'clock_in', 'clock_out', 'lunch_start', 'lunch_end')
     search_fields = ('employee__username', 'date')
 
 admin.site.register(Employee, EmployeeAdmin)

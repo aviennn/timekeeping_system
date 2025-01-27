@@ -44,3 +44,44 @@
     {% endif %}
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Records</title>
+</head>
+<body>
+    <h1>Employee Time Records</h1>
+    <p><strong>Employee Username:</strong> {{ employee.username }}</p>
+    <p><strong>Full Name:</strong> {{ employee.first_name }} {{ employee.last_name }}</p>
+
+    <h2>Time Records</h2>
+    {% if time_records %}
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Clock In</th>
+                    <th>Clock Out</th>
+                    <th>Lunch Break Hours</th>
+                    <th>Total Hours</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in time_records %}
+                    <tr>
+                        <td>{{ record.date }}</td>
+                        <td>{{ record.clock_in|time:"g:i A" }}</td>
+                        <td>{{ record.clock_out|time:"g:i A" }}</td>
+                        <td>{{ record.lunch_break_hours }}</td>
+                        <td>{{ record.total_hours }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No time records available for this employee.</p>
+    {% endif %}
+</body>
+</html>

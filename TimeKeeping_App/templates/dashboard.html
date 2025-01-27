@@ -2,9 +2,7 @@
 <html>
 <head>
     <title>TimeKeeping</title>
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-
     <style>
         body { margin: 20px; font-family: Arial; }
         .container { max-width: 1200px; margin: 0 auto; }
@@ -16,11 +14,39 @@
             border: none; 
             cursor: pointer; 
         }
-        table { width: 100%; border-collapse: collapse; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 8px; border: 1px solid #080808; text-align: left; }
         .disabled { opacity: 0.5; pointer-events: none; }
-
-        select, .password-container input[type="password"], .password-container input[type="text"] {
+        .error-message { 
+            color: red; 
+            background-color: #ffe6e6; 
+            padding: 10px; 
+            border-radius: 4px; 
+            margin: 10px 0; 
+        }
+        .lunch-active {
+            background-color: #ffeb3b;
+        }
+        .status-indicator {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status-active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .status-inactive {
+            background-color: #f44336;
+            color: white;
+        }
+        .status-pending {
+            background-color: grey;
+            color: white;
+        }
+        input, .password-container input[type="password"], .password-container input[type="text"] {
             width: 50%;
             padding: 8px;
             box-sizing: border-box;
@@ -39,9 +65,7 @@
             transform: translateY(-50%);
             cursor: pointer;
             font-size: 18px; 
-        }
-
-
+        }   
     </style>
     <script>
         function updateClock() {
@@ -53,9 +77,13 @@
             document.getElementById('clock').textContent = 
                 new Date().toLocaleString('en-US', options);
         }
+        
         document.addEventListener('DOMContentLoaded', () => {
             setInterval(updateClock, 1000);
             updateClock();
+            
+            // Disable appropriate buttons based on current state
+            updateButtonStates();
         });
 
         function togglePassword() {
@@ -69,67 +97,99 @@
                 eyeIcon.classList.replace('fa-eye-slash', 'fa-eye'); 
             }
         }
+
+        function updateButtonStates() {
+            const currentRecord = document.querySelector('table tr:first-child');
+            if (!currentRecord) return;
+
+            const clockInBtn = document.querySelector('button[value="clock_in"]');
+            const clockOutBtn = document.querySelector('button[value="clock_out"]');
+            const lunchBtn = document.querySelector('button[value="lunch_toggle"]');
+
+            const hasClockIn = currentRecord.querySelector('td:nth-child(3)').textContent.trim() !== 'None';
+            const hasClockOut = currentRecord.querySelector('td:nth-child(4)').textContent.trim() !== 'None';
+            const lunchStarted = currentRecord.querySelector('td:nth-child(5)').textContent.trim() !== '0.0';
+
+            if (clockInBtn) clockInBtn.disabled = hasClockIn;
+            if (clockOutBtn) clockOutBtn.disabled = !hasClockIn || hasClockOut;
+            if (lunchBtn) {
+                lunchBtn.textContent = lunchStarted ? 'End Lunch' : 'Start Lunch';
+                lunchBtn.disabled = !hasClockIn || hasClockOut;
+            }
+        }
     </script>
 </head>
 <body>
     <div class="container">
         <div id="clock"></div>
 
+        {% if error_message %}
+        <div class="error-message">
+            {{ error_message }}
+        </div>
+        {% endif %}
+
         {% if not current_employee %}
         <form method="post">
             {% csrf_token %}
-            <select name="employee" required>
-                <option value="">Select Employee</option>
-                {% for employee in employees %}
-                <option value="{{ employee.id }}">{{ employee.username }}</option>
-                {% endfor %}
-            </select>
+            <input type="text" name="username" placeholder="Enter Username" required>
             <div class="password-container">
                 <input type="password" id="password" name="password" required>
                 <i id="eye-icon" class="fas fa-eye eye-icon" onclick="togglePassword()"></i>
             </div>            
-            <button type="submit">Login</button>
+            <button type="submit" class="btn">Login</button>
         </form>
         {% endif %}
 
         {% if current_employee %}
+        <h2>Welcome, {{ current_employee.first_name }} {{ current_employee.last_name }}</h2>
+
+        <div class="status-indicator {% if status == 'Clocked In' %}status-active{% elif status == 'Clocked Out' %}status-inactive{% else %}status-pending{% endif %}">
+            Status: {{ status }}
+        </div>
+
+        {% with latest_record=time_records.first %}
+        {% if latest_record and latest_record.lunch_start and not latest_record.lunch_end %}
+        <div class="status-indicator lunch-active">
+            On Lunch Break
+        </div>
+        {% endif %}
+        {% endwith %}
+
         <form method="post">
             {% csrf_token %}
             <input type="hidden" name="employee" value="{{ current_employee.id }}">
             <input type="hidden" name="password" value="{{ current_employee.password }}">
-            <button class="btn" name="action" value="morning_in">Morning In</button>
-            <button class="btn" name="action" value="morning_out">Morning Out</button>
-            <button class="btn" name="action" value="afternoon_in">Afternoon In</button>
-            <button class="btn" name="action" value="afternoon_out">Afternoon Out</button>
+            
+            <button class="btn" name="action" value="clock_in">Clock In</button>
+            <button class="btn" name="action" value="clock_out">Clock Out</button>
+            <button class="btn" name="action" value="lunch_toggle">
+                {{ lunch_button_label }}
+            </button>
         </form>
 
         <table>
             <tr>
-                <th>Name</th>
                 <th>Date</th>
-                <th>Morning In</th>
-                <th>Morning Out</th>
+                <th>Employee</th>
+                <th>Clock In</th>
+                <th>Clock Out</th>
                 <th>Lunch Break Hours</th>
-                <th>Afternoon In</th>
-                <th>Afternoon Out</th>
                 <th>Total Hours</th>
             </tr>
             {% for record in time_records %}
             <tr>
-                <td>{{ record.employee.username }}</td>
                 <td>{{ record.date }}</td>
-                <td>{{ record.morning_time_in|time:"g:i:s A" }}</td>
-                <td>{{ record.morning_time_out|time:"g:i:s A" }}</td>
-                <td>{{ record.lunch_break_hours }}</td>
-                <td>{{ record.afternoon_time_in|time:"g:i:s A" }}</td>
-                <td>{{ record.afternoon_time_out|time:"g:i:s A" }}</td>
-                <td>{{ record.total_hours }}</td>
+                <td>{{ record.employee.username }}</td>
+                <td>{{ record.clock_in|time:"g:i A"|default:"None" }}</td>
+                <td>{{ record.clock_out|time:"g:i A"|default:"None" }}</td>
+                <td>{{ record.lunch_break_duration|default:"None" }}</td>
+                <td>{{ record.total_hours|default:"None" }}</td>
             </tr>
             {% endfor %}
         </table>
-
+        
         <a href="{% url 'export_pdf' %}" class="btn">Export to PDF</a>
-
         <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}
             <button type="submit" class="btn">Logout</button>

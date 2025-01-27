@@ -20,52 +20,115 @@ from django.templatetags.static import static
 from django.conf import settings
 import os
 
+
 def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
-    
+    current_time = timezone.now().astimezone(philippines_tz)
+    current_employee = None
+
+    # Check if an employee is already logged in
+    if 'current_employee_id' in request.session:
+        try:
+            current_employee = Employee.objects.get(id=request.session['current_employee_id'])
+        except Employee.DoesNotExist:
+            current_employee = None
+
     if request.method == 'POST':
-        employee_id = request.POST.get('employee')
-        password = request.POST.get('password')
-        
-        if employee_id and password:
-            try:
-                current_employee = Employee.objects.get(id=employee_id, password=password)
-                request.session['current_employee_id'] = current_employee.id
-                
-                action = request.POST.get('action')
-                
-                if action:
-                    current_time = timezone.now().astimezone(philippines_tz)
-                    record, created = TimeRecord.objects.get_or_create(
+        # Handle login via username/password text input
+        if not current_employee:
+            username = request.POST.get('username')
+            password = request.POST.get('password')
+
+            if username and password:
+                try:
+                    employee = Employee.objects.get(username=username)
+                    if employee.password == password:
+                        current_employee = employee
+                        request.session['current_employee_id'] = employee.id
+                        return redirect('dashboard')
+                except Employee.DoesNotExist:
+                    current_employee = None
+                    request.session.pop('current_employee_id', None)
+
+        # Handle actions for an authenticated employee
+        if current_employee:
+            action = request.POST.get('action')
+            if action:
+                today = current_time.date()
+                latest_record = TimeRecord.objects.filter(
+                    employee=current_employee,
+                    date=today
+                ).order_by('-clock_in').first()
+
+                create_new_record = False
+                if action == 'clock_in':
+                    if not latest_record or latest_record.clock_out:
+                        create_new_record = True
+                    elif latest_record and not latest_record.clock_out:
+                        return render(request, 'dashboard.html', {
+                            'error_message': 'You have already clocked in. Please clock out from your previous session first.',
+                            'employees': Employee.objects.all(),
+                            'current_employee': current_employee,
+                            'time_records': TimeRecord.objects.filter(employee=current_employee),
+                            'current_datetime': current_time,
+                            'status': 'Clocked In'
+                        })
+
+                if create_new_record:
+                    TimeRecord.objects.create(
                         employee=current_employee,
-                        date=current_time.date()
+                        date=today,
+                        clock_in=current_time.time()
                     )
-                    
-                    if action == 'morning_in':
-                        record.morning_time_in = current_time.time()
-                    elif action == 'morning_out':
-                        record.morning_time_out = current_time.time()
-                    elif action == 'afternoon_in':
-                        record.afternoon_time_in = current_time.time()
-                    elif action == 'afternoon_out':
-                        record.afternoon_time_out = current_time.time()
-                    
-                    record.save()
-            except Employee.DoesNotExist:
-                current_employee = None
-                request.session.pop('current_employee_id', None)
-        else:
-            request.session.pop('current_employee_id', None)
-    else:
-        current_employee = None
-        request.session.pop('current_employee_id', None)
-    
+                elif action == 'clock_out' and latest_record:
+                    if not latest_record.clock_out:
+                        latest_record.clock_out = current_time.time()
+                        latest_record.save()
+                elif action == 'lunch_toggle' and latest_record:
+                    if not latest_record.lunch_start:
+                        latest_record.lunch_start = current_time.time()
+                        latest_record.lunch_end = None
+                    elif not latest_record.lunch_end:
+                        latest_record.lunch_end = current_time.time()
+                    latest_record.save()
+
+    # Get current employee from session if it exists
+    if not current_employee and 'current_employee_id' in request.session:
+        try:
+            current_employee = Employee.objects.get(id=request.session['current_employee_id'])
+        except Employee.DoesNotExist:
+            current_employee = None
+
+    # Determine the status
+    status = "Pending"
+    lunch_button_label = "Start Lunch"
+    if current_employee:
+        today = current_time.date()
+        latest_record = TimeRecord.objects.filter(
+            employee=current_employee,
+            date=today
+        ).order_by('-clock_in').first()
+
+        if latest_record:
+            if latest_record.clock_in and not latest_record.clock_out:
+                status = "Clocked In"
+            elif latest_record.clock_in and latest_record.clock_out:
+                status = "Clocked Out"
+
+            if latest_record.lunch_start and not latest_record.lunch_end:
+                lunch_button_label = "Stop Lunch"
+            elif latest_record.lunch_start and latest_record.lunch_end:
+                lunch_button_label = "Start Lunch"
+
     return render(request, 'dashboard.html', {
         'employees': Employee.objects.all(),
         'current_employee': current_employee,
-        'time_records': TimeRecord.objects.filter(employee=current_employee) if current_employee else [],
-        'current_datetime': timezone.now().astimezone(philippines_tz)
+        'time_records': TimeRecord.objects.filter(employee=current_employee).order_by('-date', '-clock_in') if current_employee else [],
+        'current_datetime': current_time,
+        'status': status,
+        'lunch_button_label': lunch_button_label
     })
+
 
 def format_time(time_value):
     if time_value:
@@ -75,24 +138,57 @@ def format_time(time_value):
 def format_date(date_value):
     return date_value.strftime("%B %d, %Y") if date_value else "N/A"
 
-def format_hours(total_hours):
-    hours = int(total_hours)
-    minutes = round((total_hours - hours) * 60)
-    return f"{hours} hours and {minutes} minutes"
+
+# Whole function is dedicated for human readable time, its painful to do
+def calculate_duration(record):
+    if record.clock_in and record.clock_out:
+        clock_in_dt = datetime.combine(record.date, record.clock_in)
+        clock_out_dt = datetime.combine(record.date, record.clock_out)
+        duration = clock_out_dt - clock_in_dt
+        
+        # Subtract lunch break if it exists
+        if record.lunch_start and record.lunch_end:
+            lunch_start_dt = datetime.combine(record.date, record.lunch_start)
+            lunch_end_dt = datetime.combine(record.date, record.lunch_end)
+            lunch_duration = lunch_end_dt - lunch_start_dt
+            duration = duration - lunch_duration
+        
+        total_minutes = duration.total_seconds() / 60
+        hours = int(total_minutes // 60)
+        minutes = int(total_minutes % 60)
+        
+        if hours > 0:
+            return f"{hours} hour{'s' if hours != 1 else ''} {minutes} minute{'s' if minutes != 1 else ''}"
+        return f"{minutes} minute{'s' if minutes != 1 else ''}"
+    return "N/A"
+
+def calculate_lunch_duration(record):
+    if record.lunch_start and record.lunch_end:
+        lunch_start_dt = datetime.combine(record.date, record.lunch_start)
+        lunch_end_dt = datetime.combine(record.date, record.lunch_end)
+        duration = lunch_end_dt - lunch_start_dt
+        total_minutes = duration.total_seconds() / 60
+        hours = int(total_minutes // 60)
+        minutes = int(total_minutes % 60)
+        
+        if hours > 0:
+            return f"{hours} hour{'s' if hours != 1 else ''} {minutes} minute{'s' if minutes != 1 else ''}"
+        return f"{minutes} minute{'s' if minutes != 1 else ''}"
+    return "N/A"
 
 def export_pdf(request):
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="timerecords.pdf"'
-    
+
     page_width, page_height = letter
     margin = 36
     content_width = page_width - (2 * margin)
     top_margin_for_table = 80
-    
+
     p = canvas.Canvas(response, pagesize=letter)
-    
+
     current_employee_id = request.session.get('current_employee_id')
-    
+
     if current_employee_id:
         try:
             current_employee = Employee.objects.get(id=current_employee_id)
@@ -144,14 +240,15 @@ def export_pdf(request):
 
             table_y_position = employee_name_y_position - top_margin_for_table
 
-            data = [["Date", "Morning", "Afternoon", "Total Hours"]]
+            # Updated column headers and data structure
+            data = [["Date", "Clock In", "Clock Out", "Total Hours"]]
             
             for record in records:
                 data.append([
                     format_date(record.date),
-                    f"{format_time(record.morning_time_in)} - {format_time(record.morning_time_out)}",
-                    f"{format_time(record.afternoon_time_in)} - {format_time(record.afternoon_time_out)}",
-                    format_hours(record.total_hours)
+                    format_time(record.clock_in),  # Just clock in time
+                    format_time(record.clock_out), # Just clock out time
+                    calculate_duration(record)
                 ])
             
             table = Table(data, colWidths=[content_width * 0.25, content_width * 0.25, content_width * 0.25, content_width * 0.25])
@@ -200,7 +297,7 @@ def export_pdf(request):
             p.drawString(margin, page_height - margin, "No records were found.")
     else:
         p.drawString(margin, page_height - margin, "No employee entries found.")
-    
+
     p.save()
     return response
 
