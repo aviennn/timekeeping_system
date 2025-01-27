@@ -1,109 +1,54 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>TimeKeeping</title>
+{% extends 'base.html' %}
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+{% block title %}
+    User Dashboard
+{% endblock %}
 
-    <style>
-        body { margin: 20px; font-family: Arial; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        #clock { font-size: 20px; margin: 15px 0; }
-        .btn { 
-            padding: 8px 15px; 
-            margin: 5px; 
-            color: rgb(5, 5, 5); 
-            border: none; 
-            cursor: pointer; 
-        }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 8px; border: 1px solid #080808; text-align: left; }
-        .disabled { opacity: 0.5; pointer-events: none; }
+{% block content %}
+    <div id="clock"></div>
 
-        select, .password-container input[type="password"], .password-container input[type="text"] {
-            width: 50%;
-            padding: 8px;
-            box-sizing: border-box;
-            height: 40px;  
-        }
+    {% if not current_employee %}
+    <form method="post">
 
-        .password-container {
-            position: relative;
-            width: 100%;
-        }
-
-        .eye-icon {
-            position: absolute;
-            right: 610px;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: pointer;
-            font-size: 18px; 
-        }
-
-
-    </style>
-    <script>
-        function updateClock() {
-            const options = { 
-                dateStyle: 'full',
-                timeStyle: 'medium',
-                timeZone: 'Asia/Manila'
-            };
-            document.getElementById('clock').textContent = 
-                new Date().toLocaleString('en-US', options);
-        }
-        document.addEventListener('DOMContentLoaded', () => {
-            setInterval(updateClock, 1000);
-            updateClock();
-        });
-
-        function togglePassword() {
-            const passwordField = document.getElementById('password');
-            const eyeIcon = document.getElementById('eye-icon');
-            if (passwordField.type === 'password') {
-                passwordField.type = 'text';
-                eyeIcon.classList.replace('fa-eye', 'fa-eye-slash'); 
-            } else {
-                passwordField.type = 'password';
-                eyeIcon.classList.replace('fa-eye-slash', 'fa-eye'); 
-            }
-        }
-    </script>
-</head>
-<body>
-    <div class="container">
-        <div id="clock"></div>
-
-        {% if not current_employee %}
-        <form method="post">
+        <div class="form-group">
+            <label for="employee">Select Employee</label>
             {% csrf_token %}
-            <select name="employee" required>
+            <select class="form-control" id="employee" name="employee" required>
                 <option value="">Select Employee</option>
                 {% for employee in employees %}
                 <option value="{{ employee.id }}">{{ employee.username }}</option>
                 {% endfor %}
             </select>
-            <div class="password-container">
-                <input type="password" id="password" name="password" required>
-                <i id="eye-icon" class="fas fa-eye eye-icon" onclick="togglePassword()"></i>
-            </div>            
-            <button type="submit">Login</button>
-        </form>
-        {% endif %}
+        </div>
+        
+        <div class="password-container">
+            <div class="input-group">
+                <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
+                <div class="input-group-append">
+                    <span class="input-group-text bg-white">
+                        <i id="eye-icon" class="fas fa-eye" onclick="togglePassword()" style="cursor: pointer;"></i>
+                    </span>
+                </div>
+            </div>
+        </div>         
+        
+        <button class="btn btn-primary" type="submit">Login</button>
+    </form>
+    {% endif %}
 
-        {% if current_employee %}
-        <form method="post">
-            {% csrf_token %}
-            <input type="hidden" name="employee" value="{{ current_employee.id }}">
-            <input type="hidden" name="password" value="{{ current_employee.password }}">
-            <button class="btn" name="action" value="morning_in">Morning In</button>
-            <button class="btn" name="action" value="morning_out">Morning Out</button>
-            <button class="btn" name="action" value="afternoon_in">Afternoon In</button>
-            <button class="btn" name="action" value="afternoon_out">Afternoon Out</button>
-        </form>
+    {% if current_employee %}
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="employee" value="{{ current_employee.id }}">
+        <input type="hidden" name="password" value="{{ current_employee.password }}">
+        <button class="btn" name="action" value="morning_in">Morning In</button>
+        <button class="btn" name="action" value="morning_out">Morning Out</button>
+        <button class="btn" name="action" value="afternoon_in">Afternoon In</button>
+        <button class="btn" name="action" value="afternoon_out">Afternoon Out</button>
+    </form>
 
-        <table>
+    <table class="table table-striped table-responsive">
+        <thead>
             <tr>
                 <th>Name</th>
                 <th>Date</th>
@@ -114,6 +59,9 @@
                 <th>Afternoon Out</th>
                 <th>Total Hours</th>
             </tr>
+        </thead>
+        
+        <tbody>
             {% for record in time_records %}
             <tr>
                 <td>{{ record.employee.username }}</td>
@@ -126,15 +74,14 @@
                 <td>{{ record.total_hours }}</td>
             </tr>
             {% endfor %}
-        </table>
+        </tbody>
+    </table>
 
-        <a href="{% url 'export_pdf' %}" class="btn">Export to PDF</a>
+    <a href="{% url 'export_pdf' %}" class="btn">Export to PDF</a>
 
-        <form method="post" action="{% url 'logout' %}">
-            {% csrf_token %}
-            <button type="submit" class="btn">Logout</button>
-        </form>
-        {% endif %}
-    </div>
-</body>
-</html>
+    <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn">Logout</button>
+    </form>
+    {% endif %}
+{% endblock %}
