@@ -20,7 +20,7 @@
         th, td { padding: 8px; border: 1px solid #080808; text-align: left; }
         .disabled { opacity: 0.5; pointer-events: none; }
 
-        select, .password-container input[type="password"], .password-container input[type="text"] {
+        input, .password-container input[type="password"], .password-container input[type="text"] {
             width: 50%;
             padding: 8px;
             box-sizing: border-box;
@@ -78,19 +78,15 @@
         {% if not current_employee %}
         <form method="post">
             {% csrf_token %}
-            <select name="employee" required>
-                <option value="">Select Employee</option>
-                {% for employee in employees %}
-                <option value="{{ employee.id }}">{{ employee.username }}</option>
-                {% endfor %}
-            </select>
+            <input type="text" name="username" placeholder="Enter Username" required>
             <div class="password-container">
                 <input type="password" id="password" name="password" required>
                 <i id="eye-icon" class="fas fa-eye eye-icon" onclick="togglePassword()"></i>
-            </div>            
+            </div>
             <button type="submit">Login</button>
         </form>
         {% endif %}
+        
 
         {% if current_employee %}
         <form method="post">

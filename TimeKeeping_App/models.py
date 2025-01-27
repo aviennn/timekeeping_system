@@ -15,7 +15,12 @@ class Employee(models.Model):
     def save(self, *args, **kwargs):
         if not self.username:
             year = self.joined_date.year
-            self.username = f"{year}{self.last_name}{self.first_name}".replace(" ", "")
+
+            super().save(*args, **kwargs)
+
+            formatted_id = f"{self.id:04d}"
+            
+            self.username = f"{year}-{self.last_name}{self.first_name}-{formatted_id}".replace(" ", "")
         
         if not self.password:
             self.password = self.username  

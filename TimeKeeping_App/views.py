@@ -22,44 +22,50 @@ import os
 
 def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
-    
+    current_employee = None
+
+    if 'current_employee_id' in request.session:
+        try:
+            current_employee = Employee.objects.get(id=request.session['current_employee_id'])
+        except Employee.DoesNotExist:
+            current_employee = None
+
     if request.method == 'POST':
-        employee_id = request.POST.get('employee')
-        password = request.POST.get('password')
-        
-        if employee_id and password:
-            try:
-                current_employee = Employee.objects.get(id=employee_id, password=password)
-                request.session['current_employee_id'] = current_employee.id
+        if not current_employee:
+            username = request.POST.get('username')
+            password = request.POST.get('password')
+            
+            if username and password:
+                try:
+                    employee = Employee.objects.get(username=username)
+                    if employee.password == password:
+                        current_employee = employee
+                        request.session['current_employee_id'] = employee.id  
+                        return redirect('dashboard')  
+                except Employee.DoesNotExist:
+                    current_employee = None
+                    request.session.pop('current_employee_id', None)
+
+        if current_employee:
+            action = request.POST.get('action')
+            if action:
+                current_time = timezone.now().astimezone(philippines_tz)
+                record, created = TimeRecord.objects.get_or_create(
+                    employee=current_employee,
+                    date=current_time.date()
+                )
                 
-                action = request.POST.get('action')
+                if action == 'morning_in':
+                    record.morning_time_in = current_time.time()
+                elif action == 'morning_out':
+                    record.morning_time_out = current_time.time()
+                elif action == 'afternoon_in':
+                    record.afternoon_time_in = current_time.time()
+                elif action == 'afternoon_out':
+                    record.afternoon_time_out = current_time.time()
                 
-                if action:
-                    current_time = timezone.now().astimezone(philippines_tz)
-                    record, created = TimeRecord.objects.get_or_create(
-                        employee=current_employee,
-                        date=current_time.date()
-                    )
-                    
-                    if action == 'morning_in':
-                        record.morning_time_in = current_time.time()
-                    elif action == 'morning_out':
-                        record.morning_time_out = current_time.time()
-                    elif action == 'afternoon_in':
-                        record.afternoon_time_in = current_time.time()
-                    elif action == 'afternoon_out':
-                        record.afternoon_time_out = current_time.time()
-                    
-                    record.save()
-            except Employee.DoesNotExist:
-                current_employee = None
-                request.session.pop('current_employee_id', None)
-        else:
-            request.session.pop('current_employee_id', None)
-    else:
-        current_employee = None
-        request.session.pop('current_employee_id', None)
-    
+                record.save()
+
     return render(request, 'dashboard.html', {
         'employees': Employee.objects.all(),
         'current_employee': current_employee,
@@ -205,7 +211,7 @@ def export_pdf(request):
     return response
 
 def logout_view(request):
-    request.session.flush()  
+    request.session.pop('current_employee_id', None)  
     return redirect('dashboard')
 
 def admin_dashboard(request):
