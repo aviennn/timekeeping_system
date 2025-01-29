@@ -80,7 +80,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'timekeeping_system', 
         'USER': 'root',  
-        'PASSWORD': 'ssadwq0010',  
+        'PASSWORD': 'W0tdafrehk!,',  
         'HOST': 'localhost',  
         'PORT': '3306',  
     }
