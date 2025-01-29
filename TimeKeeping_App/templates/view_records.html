@@ -1,19 +1,75 @@
+{% extends 'base.html' %}
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Records</title>
-</head>
-<body>
-    <h1>Employee Time Records</h1>
-    <p><strong>Employee Username:</strong> {{ employee.username }}</p>
-    <p><strong>Full Name:</strong> {{ employee.first_name }} {{ employee.last_name }}</p>
+{% block title %}
+    {% if is_authenticated %}
+    {{ user.username }} |  Academe TS
+    {% else %}
+    Log In |  Academe TS
+    {% endif %}
+{% endblock %}
 
-    <h2>Time Records</h2>
+{% block nav %}
+    <nav class="navbar navbar-dark navbar-expand-lg navbar-custom">
+        <div class="container-fluid">
+            <div class="nav-logo navbar-brand">
+                <img src="/static/images/icon-1.png" width="42" height="30" class="align-top">
+                <span class="h3">Academe TS</span>
+            </div>
+
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNavDropdown">
+                <ul class="navbar-nav ms-auto ml-auto">
+                    {% if is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            {{ user.username }}
+                        </a>
+                    
+                        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
+                            <a class="dropdown-item" href="{% url 'logout_admin' %}"><span class="text-secondary"><i class="fas fa-sign-out-alt"></i> | Log Out</span></a>
+                        </div>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin_dashboard' %}"> <i class="fas fa-sign-in-alt"></i> | Log In</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+    <div class="category-header">
+        <div class="text-section">
+            <h1><b>Employee Time Record</b></h1>
+        </div>
+        <img src="/static/images/3d-4.png" alt="Employee Icon">
+    </div>
+    
+    <div class="employee-info">
+        <p class="employee-title mb-3">
+            <span class="icon-box">
+                <i class="far fa-id-card" style="font-size: 30px;"></i>
+            </span>
+            <b style="font-size: 25px;">Employee Information</b>
+        </p>
+        <p class="text-secondary"><b>Username:</b> {{ employee.username }}</p>
+        <p class="text-secondary"><b>Full Name:</b> {{ employee.first_name }} {{ employee.last_name }}</p>
+    </div>
+
     {% if time_records %}
-        <table border="1">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-dark">Time-in/Time-out Record</h6>
+        </div>    
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
             <thead>
                 <tr>
                     <th>Date</th>
@@ -25,20 +81,24 @@
             </thead>
             <tbody>
                 {% for record in time_records %}
-                    <tr>
-                        <td>{{ record.date }}</td>
-                        <td>{{ record.clock_in|time:"g:i A" }}</td>
-                        <td>{{ record.clock_out|time:"g:i A" }}</td>
-                        <td>{{ record.lunch_break_duration }}</td>
-                        <td>{{ record.total_hours }}</td>
+                <tr class="ts-tr">
+                    <td>{{ record.date }}</td>
+                    <td>{{ record.clock_in|time:"g:i A" }}</td>
+                    <td>{{ record.clock_out|time:"g:i A" }}</td>
+                    <td>{{ record.lunch_break_duration }}</td>
+                    <td>{{ record.total_hours }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+</div>
+</div>
     {% else %}
         <p>No time records available for this employee.</p>
     {% endif %}
+
     <a href="{% url 'export_pdf' pk=employee.id %}" class="btn">Export to PDF</a>
     <a href="{% url 'export_excel' pk=employee.id %}" class="btn">Export to Excel</a>
-</body>
-</html>
+{% endblock %}
+

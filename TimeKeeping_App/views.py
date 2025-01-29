@@ -191,7 +191,6 @@ def export_pdf(request, pk):
     try:
         current_employee = Employee.objects.get(id=pk)
         records = TimeRecord.objects.filter(employee=current_employee)
-        
         full_name = f"{current_employee.first_name} {current_employee.last_name}"
 
         icon_path = os.path.join(settings.BASE_DIR, 'TimeKeeping_App', 'static', 'images', 'icon-3.jpg')
@@ -204,18 +203,13 @@ def export_pdf(request, pk):
         title_x = (page_width - title_width) / 2
 
         spacing = 5
-
         image_width = 42
         title_width = p.stringWidth(title_text, "Helvetica-Bold", 31)
-
         total_width = image_width + spacing + title_width
-
         start_x = (page_width - total_width) / 2
-
         text_y = page_height - margin - 6
 
         p.drawImage(icon_path, start_x, icon_y, width=image_width, height=30)
-
         p.drawString(start_x + image_width + spacing, text_y, title_text)
 
         p.setFont("Helvetica", 12)
@@ -229,53 +223,55 @@ def export_pdf(request, pk):
         employee_name_label_width = p.stringWidth(employee_name_label_text, "Helvetica-Bold", 12)
         employee_name_label_y_position = subtitle_y_position - 25
         p.drawString((page_width - employee_name_label_width) / 2, employee_name_label_y_position, employee_name_label_text)
-
-        p.setFont("Helvetica", 12)
-        employee_name_text = full_name
-        employee_name_width = p.stringWidth(employee_name_text, "Helvetica", 12)
-        employee_name_y_position = employee_name_label_y_position - 20
-        p.drawString((page_width - employee_name_width) / 2, employee_name_y_position, employee_name_text)
-
-        table_y_position = employee_name_y_position - top_margin_for_table
-
-        # Updated column headers and data structure
-        data = [["Date", "Clock In", "Clock Out", "Total Hours"]]
         
+        p.setFont("Helvetica", 12)
+        employee_name_width = p.stringWidth(full_name, "Helvetica", 12)
+        employee_name_y_position = employee_name_label_y_position - 20
+        p.drawString((page_width - employee_name_width) / 2, employee_name_y_position, full_name)
+
+        table_y_position = page_height - margin - top_margin_for_table
+        
+        data = [["Date", "Clock In", "Clock Out", "Total Hours"]]
         for record in records:
             data.append([
                 format_date(record.date),
-                format_time(record.clock_in),  # Just clock in time
-                format_time(record.clock_out), # Just clock out time
+                format_time(record.clock_in),
+                format_time(record.clock_out),
                 calculate_duration(record)
             ])
         
-        table = Table(data, colWidths=[content_width * 0.25, content_width * 0.25, content_width * 0.25, content_width * 0.25])
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-            ('LEFTPADDING', (0, 0), (-1, -1), 2),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 2),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-        ]))
+        available_height = table_y_position - (margin + 20)
+        rows_per_page = int(available_height / 20)
         
-        table_width, table_height = table.wrap(0, 0)
-        table_x = (page_width - table_width) / 2
-        table_y = table_y_position
-
-        table.drawOn(p, table_x, table_y)
-
-        signature_y = table_y - 50
-
+        start_row = 1
+        while start_row < len(data):
+            table_chunk = [data[0]] + data[start_row:start_row + rows_per_page]
+            table = Table(table_chunk, colWidths=[content_width * 0.25] * 4)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('LEFTPADDING', (0, 0), (-1, -1), 2),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 2),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ]))
+            
+            table.wrapOn(p, content_width, available_height)
+            table.drawOn(p, margin, table_y_position - (len(table_chunk) * 20))
+            
+            start_row += rows_per_page
+            if start_row < len(data):
+                p.showPage()
+                table_y_position = page_height - margin - top_margin_for_table
+        
+        signature_y = margin + 70
         center_x = page_width / 2
-
         line_width = 200
-
         employee_signature_x = center_x - (line_width + 40)
         supervisor_signature_x = center_x + 40
 
@@ -290,11 +286,12 @@ def export_pdf(request, pk):
 
         p.drawString(employee_text_x, signature_y - 12, "Signature of Employee")
         p.drawString(supervisor_text_x, signature_y - 12, "Signature of Supervisor")
-
+        
+        p.save()
     except Employee.DoesNotExist:
         p.drawString(margin, page_height - margin, "No records were found.")
+        p.save()
 
-    p.save()
     return response
 
 
@@ -332,7 +329,12 @@ class EmployeeRecord(UserPassesTestMixin, View):
     def get(self, request, pk):
         employee = get_object_or_404(Employee, pk=pk)
         time_records = TimeRecord.objects.filter(employee=employee)
-        return render(request, "view_records.html", {"employee": employee, "time_records": time_records})
+        return render(request, "view_records.html", {
+            "employee": employee, 
+            "user": request.user,
+            "is_authenticated": request.user.is_authenticated,
+            "time_records": time_records
+        })
     
 def logout_admin(request):
     request.session.flush()  
