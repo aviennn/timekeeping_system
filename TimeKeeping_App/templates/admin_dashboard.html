@@ -1,48 +1,103 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    Admin Dashboard
+    {% if is_authenticated %}
+    {{ user.username }} |  Academe TS
+    {% else %}
+    Log In |  Academe TS
+    {% endif %}
+{% endblock %}
+
+{% block nav %}
+    <nav class="navbar navbar-dark navbar-expand-lg navbar-custom">
+        <div class="container-fluid">
+            <!-- Centered Logo -->
+            <div class="nav-logo navbar-brand">
+                <img src="/static/images/icon-1.png" width="42" height="30" class="align-top">
+                <span class="h3">Academe TS</span>
+            </div>
+
+            <!-- Navbar Toggle for Mobile -->
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <!-- Navbar Items (Aligned Right) -->
+            <div class="collapse navbar-collapse" id="navbarNavDropdown">
+                <ul class="navbar-nav ms-auto ml-auto"> <!-- Added ml-auto here to ensure right alignment -->
+                    {% if is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            {{ user.username }}
+                        </a>
+                    
+                        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
+                            <a class="dropdown-item" href="{% url 'logout_admin' %}"><span class="text-secondary"><i class="fas fa-sign-out-alt"></i> | Log Out</span></a>
+                        </div>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin_dashboard' %}"> <i class="fas fa-sign-in-alt"></i> | Log In</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
 {% endblock %}
 
 {% block content %}
-    <h1>Admin Dashboard</h1>
 
     {% if is_authenticated %}
-        <h2>Welcome, {{ user.username }}!</h2>
-        <h3>List of Employees</h3>
-        
-        <table class="table table-striped table-responsive">
-            <thead>
-                <tr>
-                    <th>Username</th>
-                    <th>First Name</th>
-                    <th>Middle Name</th>
-                    <th>Last Name</th>
-                    <th>Email</th>
-                    <th>Date Joined</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            
-            <tbody>
-                {% for employee in employees %}
-                <tr>
-                    <td>{{ employee.username }}</td>
-                    <td>{{ employee.first_name }}</td>
-                    <td>{{ employee.middle_name }}</td>
-                    <td>{{ employee.last_name }}</td>
-                    <td>{{ employee.email }}</td>
-                    <td>{{ employee.joined_date }}</td>
-                    <td><a href="{% url 'view_records' employee.id %}"><button>View Records</button></a></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        
-        <form method="post" action="{% url 'logout_admin' %}">
-            {% csrf_token %}
-            <button type="submit" class="btn">Logout</button>
-        </form>
+        <div class="category-header">
+            <div class="text-section">
+                <p class="welcome-text">Welcome, <b>{{ user.username }}!</b></p>
+                <h1><b>Employee List</b></h1>
+            </div>
+            <img src="/static/images/3d-6.png">
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-dark">List of Employees</h6>
+            </div>
+                
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>First Name</th>
+                                <th>Middle Name</th>
+                                <th>Last Name</th>
+                                <th>Email</th>
+                                <th>Date Joined</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        
+                        <tbody>
+                            {% for employee in employees %}
+                            <tr>
+                                <td>{{ employee.username }}</td>
+                                <td>{{ employee.first_name }}</td>
+                                <td>{{ employee.middle_name }}</td>
+                                <td>{{ employee.last_name }}</td>
+                                <td>{{ employee.email }}</td>
+                                <td>{{ employee.joined_date }}</td>
+                                <td>
+                                    <a href="{% url 'view_records' employee.id %}" class="btn btn-sm btn-outline-primary px-2 py-2 mx-1 my-1">
+                                        <i class="fas fa-binoculars"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
     {% else %}
         <p>You are not logged in. Please log in.</p>

@@ -132,7 +132,7 @@ JAZZMIN_SETTINGS = {
     "login_logo":"images/icon-1.png",
     "login_logo_dark":"images/icon-2.png",
     #"site_logo_classes": "",
-    "site_icon":"images/icon-1.png",
+    "site_icon":"images/favicon.png",
     "welcome_sign": "Academe TS by GOCLOUD",
     "copyright": "GOCLOUD Asia, Inc",
     #"search_model": ["auth.User", "auth.Group"],
