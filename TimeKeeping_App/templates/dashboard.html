@@ -1,140 +1,165 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>TimeKeeping</title>
+{% extends 'base.html' %}
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+{% block title %}
+    {% if current_employee %}
+    {{ current_employee.username }} |  Academe TS
+    {% else %}
+    Log In |  Academe TS
+    {% endif %}
+{% endblock %}
 
-    <style>
-        body { margin: 20px; font-family: Arial; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        #clock { font-size: 20px; margin: 15px 0; }
-        .btn { 
-            padding: 8px 15px; 
-            margin: 5px; 
-            color: rgb(5, 5, 5); 
-            border: none; 
-            cursor: pointer; 
-        }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 8px; border: 1px solid #080808; text-align: left; }
-        .disabled { opacity: 0.5; pointer-events: none; }
+{% block nav %}
+    <nav class="navbar navbar-dark navbar-expand-lg navbar-custom">
+        <div class="container-fluid">
 
-        select, .password-container input[type="password"], .password-container input[type="text"] {
-            width: 50%;
-            padding: 8px;
-            box-sizing: border-box;
-            height: 40px;  
-        }
+            <div class="nav-logo navbar-brand">
+                <img src="/static/images/icon-1.png" width="42" height="30" class="align-top">
+                <span class="h3">Academe TS</span>
+            </div>
 
-        .password-container {
-            position: relative;
-            width: 100%;
-        }
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-        .eye-icon {
-            position: absolute;
-            right: 610px;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: pointer;
-            font-size: 18px; 
-        }
+            <div class="collapse navbar-collapse" id="navbarNavDropdown">
+                <ul class="navbar-nav ms-auto ml-auto">
+                    {% if current_employee %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            {{ current_employee.username }}
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
+                            <a class="dropdown-item" href="{% url 'logout' %}"><span class="text-secondary"><i class="fas fa-sign-out-alt"></i> | Log Out</span></a>
+                        </div>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"> <i class="fas fa-sign-in-alt"></i> | Log In</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+    {% if current_employee %}
+    <div class="category-header-2">
+        <div class="text-section">
+            <p class="welcome-text">Welcome, <b>{{ current_employee.username }}!</b></p>
+            <h1><b>Timekeeping</b></h1>
+        </div>
+        <img src="/static/images/3d-3.png" alt="Employee Icon">
+    </div>
+    {% else %}
+    <div class="category-header-2">
+        <div class="text-section">
+            <h1><b>Timekeeping</b></h1>
+        </div>
+        <img src="/static/images/3d-3.png" alt="Employee Icon">
+    </div>
+    {% endif %}
+
+    <div class="d-flex justify-content-center">
+        <div id="clock" class="clock col-sm-5">
+                <h1><i class='far fa-clock'></i></h1><div id="time" class="time"></div>
+            <div id="date" class="date"></div>
+        </div>
+    </div>
+
+    {% if error_message %}
+    <div class="error-message">
+        {{ error_message }}
+    </div>
+    {% endif %}
 
 
-    </style>
-    <script>
-        function updateClock() {
-            const options = { 
-                dateStyle: 'full',
-                timeStyle: 'medium',
-                timeZone: 'Asia/Manila'
-            };
-            document.getElementById('clock').textContent = 
-                new Date().toLocaleString('en-US', options);
-        }
-        document.addEventListener('DOMContentLoaded', () => {
-            setInterval(updateClock, 1000);
-            updateClock();
-        });
-
-        function togglePassword() {
-            const passwordField = document.getElementById('password');
-            const eyeIcon = document.getElementById('eye-icon');
-            if (passwordField.type === 'password') {
-                passwordField.type = 'text';
-                eyeIcon.classList.replace('fa-eye', 'fa-eye-slash'); 
-            } else {
-                passwordField.type = 'password';
-                eyeIcon.classList.replace('fa-eye-slash', 'fa-eye'); 
-            }
-        }
-    </script>
-</head>
-<body>
-    <div class="container">
-        <div id="clock"></div>
-
-        {% if not current_employee %}
-        <form method="post">
+    {% if not current_employee %}
+    <form method="post">
+        <div class="form-group">
+           
             {% csrf_token %}
-            <select name="employee" required>
-                <option value="">Select Employee</option>
-                {% for employee in employees %}
-                <option value="{{ employee.id }}">{{ employee.username }}</option>
-                {% endfor %}
-            </select>
+            <input class="form-control" type="text" name="username" placeholder="Enter Username" required>
             <div class="password-container">
-                <input type="password" id="password" name="password" required>
-                <i id="eye-icon" class="fas fa-eye eye-icon" onclick="togglePassword()"></i>
-            </div>            
-            <button type="submit">Login</button>
-        </form>
+                <div class="input-group">
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
+                    <div class="input-group-append">
+                        <span class="input-group-text bg-white">
+                            <i id="eye-icon" class="fas fa-eye" onclick="togglePassword()" style="cursor: pointer;"></i>
+                        </span>
+                    </div>
+                </div>
+            </div><br>          
+            <button class="btn btn-primary" type="submit">Login</button>
+        </div>
+    </form>
         {% endif %}
 
         {% if current_employee %}
-        <form method="post">
-            {% csrf_token %}
+    <div class="d-flex flex-wrap flex-md-nowrap justify-content-between align-items-start gap-3">
+
+        <div class="status-indicator {% if status == 'Clocked In' %}status-active{% elif status == 'Clocked Out' %}status-inactive{% else %}status-pending{% endif %}">
+            Status: {{ status }}
+        </div>
+
+        {% with latest_record=time_records.first %}
+        {% if latest_record and latest_record.lunch_start and not latest_record.lunch_end %}
+        <div class="status-indicator lunch-active">
+            On Lunch Break
+        </div>
+        {% endif %}
+        {% endwith %}
+        <form method="post" class="d-flex flex-wrap p-2">
+            {% csrf_token <select name="employee" required>%}
             <input type="hidden" name="employee" value="{{ current_employee.id }}">
             <input type="hidden" name="password" value="{{ current_employee.password }}">
-            <button class="btn" name="action" value="morning_in">Morning In</button>
-            <button class="btn" name="action" value="morning_out">Morning Out</button>
-            <button class="btn" name="action" value="afternoon_in">Afternoon In</button>
-            <button class="btn" name="action" value="afternoon_out">Afternoon Out</button>
-        </form>
+            <button class="btn btn-sm btn-outline-primary px-4 py-2 mx-1 my-1" name="action" value="clock_in">Clock In</button>
+            <button class="btn btn-sm btn-outline-primary px-4 py-2 mx-1 my-1" name="action" value="clock_out">Clock Out</button>
+            <button  class="btn btn-sm btn-outline-primary px-4 py-2 mx-1 my-1" name="action" value="lunch_toggle">
+                {{ lunch_button_label }}
+            </button>
 
-        <table>
+        </form>
+        
+    </div>
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-dark">Time-in/Time-out Record</h6>
+        </div>
+
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+        <thead>
+
             <tr>
-                <th>Name</th>
                 <th>Date</th>
-                <th>Morning In</th>
-                <th>Morning Out</th>
+                <th>Employee</th>
+                <th>Clock In</th>
+                <th>Clock Out</th>
                 <th>Lunch Break Hours</th>
-                <th>Afternoon In</th>
-                <th>Afternoon Out</th>
                 <th>Total Hours</th>
             </tr>
+        </thead>
+
+        <tbody>
             {% for record in time_records %}
             <tr>
-                <td>{{ record.employee.username }}</td>
                 <td>{{ record.date }}</td>
-                <td>{{ record.morning_time_in|time:"g:i:s A" }}</td>
-                <td>{{ record.morning_time_out|time:"g:i:s A" }}</td>
-                <td>{{ record.lunch_break_hours }}</td>
-                <td>{{ record.afternoon_time_in|time:"g:i:s A" }}</td>
-                <td>{{ record.afternoon_time_out|time:"g:i:s A" }}</td>
-                <td>{{ record.total_hours }}</td>
+                <td>{{ record.employee.username }}</td>
+                <td>{{ record.clock_in|time:"g:i A"|default:"None" }}</td>
+                <td>{{ record.clock_out|time:"g:i A"|default:"None" }}</td>
+                <td>{{ record.lunch_break_duration|default:"None" }}</td>
+                <td>{{ record.total_hours|default:"None" }}</td>
             </tr>
             {% endfor %}
+        </tbody>
         </table>
-
-        <a href="{% url 'export_pdf' %}" class="btn">Export to PDF</a>
-
-        <form method="post" action="{% url 'logout' %}">
-            {% csrf_token %}
-            <button type="submit" class="btn">Logout</button>
-        </form>
-        {% endif %}
     </div>
-</body>
-</html>
+</div>
+</div>
+       
+
+    {% endif %}
+{% endblock %}
