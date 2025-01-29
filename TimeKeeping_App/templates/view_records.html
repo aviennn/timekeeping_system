@@ -11,20 +11,17 @@
 {% block nav %}
     <nav class="navbar navbar-dark navbar-expand-lg navbar-custom">
         <div class="container-fluid">
-            <!-- Centered Logo -->
             <div class="nav-logo navbar-brand">
                 <img src="/static/images/icon-1.png" width="42" height="30" class="align-top">
                 <span class="h3">Academe TS</span>
             </div>
 
-            <!-- Navbar Toggle for Mobile -->
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
-            <!-- Navbar Items (Aligned Right) -->
             <div class="collapse navbar-collapse" id="navbarNavDropdown">
-                <ul class="navbar-nav ms-auto ml-auto"> <!-- Added ml-auto here to ensure right alignment -->
+                <ul class="navbar-nav ms-auto ml-auto">
                     {% if is_authenticated %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
