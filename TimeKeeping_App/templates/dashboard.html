@@ -189,7 +189,7 @@
             {% endfor %}
         </table>
         
-        <a href="{% url 'export_pdf' %}" class="btn">Export to PDF</a>
+         
         <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}
             <button type="submit" class="btn">Logout</button>

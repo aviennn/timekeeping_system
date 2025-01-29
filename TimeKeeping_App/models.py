@@ -22,6 +22,14 @@ class Employee(models.Model):
         if not self.password:
             self.password = self.username  
 
+        if self.pk:  
+                original = Employee.objects.get(pk=self.pk)
+                if original.first_name != self.first_name or original.last_name != self.last_name:
+                    year = self.joined_date.year
+                    formatted_id = f"{self.id:04d}"
+                    self.username = f"{year}-{self.last_name}{self.first_name}-{formatted_id}".replace(" ", "")
+                    self.password = self.username
+        
         super().save(*args, **kwargs)
 
     def __str__(self):
