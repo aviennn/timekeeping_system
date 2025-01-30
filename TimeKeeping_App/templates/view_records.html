@@ -48,7 +48,7 @@
         <div class="text-section">
             <h1><b>Employee Time Record</b></h1>
         </div>
-        <img src="/static/images/3d-4.png" alt="Employee Icon">
+        <img src="/static/images/3d-2.png" alt="Employee Icon">
     </div>
     
     <div class="employee-info">
@@ -62,10 +62,10 @@
         <p class="text-secondary"><b>Full Name:</b> {{ employee.first_name }} {{ employee.last_name }}</p>
     </div>
 
-    {% if time_records %}
+    {% if time_records %}    
     <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-dark">Time-in/Time-out Record</h6>
+        <div class="card-header bg-secondary py-3">
+            <h6 class="m-0 font-weight-bold text-light">Time-in/Time-out Record</h6>
         </div>    
     <div class="card-body">
         <div class="table-responsive">
@@ -94,11 +94,24 @@
     </div>
 </div>
 </div>
-    {% else %}
-        <p>No time records available for this employee.</p>
-    {% endif %}
 
-    <a href="{% url 'export_pdf' pk=employee.id %}" class="btn">Export to PDF</a>
-    <a href="{% url 'export_excel' pk=employee.id %}" class="btn">Export to Excel</a>
+<div class="d-flex flex-wrap flex-md-nowrap gap-3 justify-content-center justify-content-md-end">
+    <a href="{% url 'export_pdf' pk=employee.id %}" class="btn btn-sm btn-outline-danger px-4 py-2 mx-1 my-1">
+        <i class="far fa-file-pdf"></i> Export as .PDF
+    </a>
+
+    <a href="{% url 'export_excel' pk=employee.id %}" class="btn btn-sm btn-outline-success px-4 py-2 mx-1 my-1">
+        <i class="fas fa-file-excel"></i> Export as .XLSX
+    </a>
+</div>
+{% else %}
+<div class="sorry-area">
+    <h1 class="text-center text-secondary">
+        <img class="sorry-img mb-4" src="/static/images/3d-4.png"><br>
+        <b>Sorry...</b>
+    </h1>
+    
+    <p class="text-center text-secondary">But there are no time records available for this employee.</p>
+</div>
+{% endif %}
 {% endblock %}
-

@@ -101,7 +101,7 @@ def dashboard(request):
             current_employee = None
 
 
-    status = "Pending"
+    status = "Awaiting Status"
     lunch_button_label = "Start Lunch"
     if current_employee:
         today = current_time.date()
