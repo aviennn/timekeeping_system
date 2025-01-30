@@ -80,7 +80,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'timekeeping_system', 
         'USER': 'root',  
-        'PASSWORD': 'ssadwq0010',  
+        'PASSWORD': 'patty123',  
         'HOST': 'localhost',  
         'PORT': '3306',  
     }
@@ -233,3 +233,10 @@ JAZZMIN_UI_TWEAKS = {
         "success": "btn-success"
     }
 }
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'academetsmain@gmail.com'
+EMAIL_HOST_PASSWORD = 'ytbj gzks dzxk csrg' # MAKE SURE TO DELETE THIS BEFORE PUSHING TO GITHUB
