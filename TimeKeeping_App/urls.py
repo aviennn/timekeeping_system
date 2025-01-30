@@ -9,4 +9,5 @@ urlpatterns = [
     path('view_records/<int:pk>/', views.EmployeeRecord.as_view(), name='view_records'),  
     path('logout-admin/', views.logout_admin, name='logout_admin'),
     path('export_excel/<int:pk>/', views.export_excel, name='export_excel'),
+    path("create-employee/", views.create_employee, name="create_employee"),
 ]

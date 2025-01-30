@@ -61,39 +61,50 @@
         <p class="text-secondary"><b>Username:</b> {{ employee.username }}</p>
         <p class="text-secondary"><b>Full Name:</b> {{ employee.first_name }} {{ employee.last_name }}</p>
     </div>
-
+    
+ 
     {% if time_records %}
     <div class="card shadow mb-4">
         <div class="card-header py-3">
             <h6 class="m-0 font-weight-bold text-dark">Time-in/Time-out Record</h6>
         </div>    
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Clock In</th>
-                    <th>Clock Out</th>
-                    <th>Lunch Break Hours</th>
-                    <th>Total Hours</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for record in time_records %}
-                <tr class="ts-tr">
-                    <td>{{ record.date }}</td>
-                    <td>{{ record.clock_in|time:"g:i A" }}</td>
-                    <td>{{ record.clock_out|time:"g:i A" }}</td>
-                    <td>{{ record.lunch_break_duration }}</td>
-                    <td>{{ record.total_hours }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="card-body">
+            <form method="GET" action="{% url 'view_records' pk=employee.id %}" class="mb-4">
+                {% csrf_token %}
+                <label for="datefrom">From:</label>
+                <input type="date" id="datefrom" name="datefrom">
+                <label for="dateto">To:</label>
+                <input type="date" id="dateto" name="dateto">
+                <button type="submit">Filter</button>
+            </form>
+    
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Clock In</th>
+                            <th>Clock Out</th>
+                            <th>Lunch Break Hours</th>
+                            <th>Total Hours</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in time_records %}
+                        <tr class="ts-tr">
+                            <td>{{ record.date }}</td>
+                            <td>{{ record.clock_in|time:"g:i A" }}</td>
+                            <td>{{ record.clock_out|time:"g:i A" }}</td>
+                            <td>{{ record.lunch_break_duration }}</td>
+                            <td>{{ record.total_hours }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
-</div>
-</div>
+    
     {% else %}
         <p>No time records available for this employee.</p>
     {% endif %}

@@ -20,7 +20,10 @@ from django.templatetags.static import static
 from django.conf import settings
 import os
 import pandas as pd
-
+from .forms import EmployeeCreationForm
+from .models import Employee
+from django.shortcuts import render, redirect
+from django.contrib.auth.hashers import check_password
 
 def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
@@ -41,7 +44,7 @@ def dashboard(request):
             if username and password:
                 try:
                     employee = Employee.objects.get(username=username)
-                    if employee.password == password:
+                    if check_password(password, employee.password):
                         current_employee = employee
                         request.session['current_employee_id'] = employee.id
                         return redirect('dashboard')
@@ -319,6 +322,10 @@ def admin_dashboard(request):
         'error_message': error_message,
     })
 
+from django.shortcuts import render, get_object_or_404
+from .models import TimeRecord, Employee
+from django.http import HttpResponseForbidden
+
 class EmployeeRecord(UserPassesTestMixin, View):
     def test_func(self):
         return self.request.user.is_superuser
@@ -328,13 +335,22 @@ class EmployeeRecord(UserPassesTestMixin, View):
 
     def get(self, request, pk):
         employee = get_object_or_404(Employee, pk=pk)
-        time_records = TimeRecord.objects.filter(employee=employee)
+        
+        datefrom = request.GET.get('datefrom')
+        dateto = request.GET.get('dateto')
+
+        if datefrom and dateto:
+            time_records = TimeRecord.objects.filter(employee=employee, date__gte=datefrom, date__lte=dateto)
+        else:
+            time_records = TimeRecord.objects.filter(employee=employee)
+
         return render(request, "view_records.html", {
             "employee": employee, 
             "user": request.user,
             "is_authenticated": request.user.is_authenticated,
             "time_records": time_records
         })
+
     
 def logout_admin(request):
     request.session.flush()  
@@ -363,3 +379,15 @@ def export_excel(request, pk):
         df.to_excel(writer, index=False, sheet_name='Time Records')
     
     return response
+
+def create_employee(request):
+    if request.method == "POST":
+        form = EmployeeCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("admin_dashboard")  
+    else:
+        form = EmployeeCreationForm()
+
+    employees = Employee.objects.all()
+    return render(request, "admin_dashboard.html", {"form": form, "employees": employees})
