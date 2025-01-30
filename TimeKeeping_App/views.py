@@ -24,6 +24,7 @@ from .forms import EmployeeCreationForm
 from .models import Employee
 from django.shortcuts import render, redirect
 from django.contrib.auth.hashers import check_password
+from .forms import EmployeeUpdateForm
 
 def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
@@ -299,7 +300,7 @@ def export_pdf(request, pk):
 
 
 def logout_view(request):
-    request.session.flush()  
+    request.session.pop('current_employee_id', None)  
     return redirect('dashboard')
 
 def admin_dashboard(request):
@@ -322,9 +323,6 @@ def admin_dashboard(request):
         'error_message': error_message,
     })
 
-from django.shortcuts import render, get_object_or_404
-from .models import TimeRecord, Employee
-from django.http import HttpResponseForbidden
 
 class EmployeeRecord(UserPassesTestMixin, View):
     def test_func(self):
@@ -391,3 +389,19 @@ def create_employee(request):
 
     employees = Employee.objects.all()
     return render(request, "admin_dashboard.html", {"form": form, "employees": employees})
+
+
+def view_user_info(request, employee_id):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return HttpResponseForbidden("You do not have permission to access this page.")
+
+    employee = get_object_or_404(Employee, id=employee_id)
+
+    if request.method == 'POST':
+        form = EmployeeCreationForm(request.POST, instance=employee)
+        if form.is_valid():
+            form.save() 
+            return redirect('view_user_info', employee_id=employee.id)  
+    else:
+        form = EmployeeCreationForm(instance=employee)  
+    return render(request, 'view_user_info.html', {'employee': employee, 'form': form})
