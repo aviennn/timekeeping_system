@@ -80,7 +80,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'timekeeping_system', 
         'USER': 'root',  
-        'PASSWORD': 'put database password here',  
+        'PASSWORD': 'put password here',  
         'HOST': 'localhost',  
         'PORT': '3306',  
     }
@@ -132,7 +132,7 @@ JAZZMIN_SETTINGS = {
     "site_header": "Academe TS",
     "site_brand": "Academe TS",
     "site_logo":"images/icon-1.png",
-    "login_logo":"images/icon-1.png",
+    "login_logo":"images/icon-2.png",
     "login_logo_dark":"images/icon-2.png",
     #"site_logo_classes": "",
     "site_icon":"images/favicon.png",
