@@ -6,7 +6,7 @@ from .models import Employee, TimeRecord
 from datetime import datetime
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from django.shortcuts import redirect
+from django.shortcuts import render, redirect
 from django.views import View
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth import authenticate, login
@@ -19,14 +19,24 @@ from datetime import datetime
 from django.templatetags.static import static
 from django.conf import settings
 import os
+import pandas as pd
+from .forms import EmployeeCreationForm
+from .models import Employee
+from django.contrib import messages  
+from .forms import EmployeeUpdateForm
 
+#for password reset
+from django.contrib import messages
+from django.contrib.auth.hashers import check_password, make_password
+from django.utils import timezone
+from .forms import ChangePasswordForm, ResetPasswordEmailForm, ResetPasswordForm
+from .models import Employee
 
 def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
     current_time = timezone.now().astimezone(philippines_tz)
     current_employee = None
 
-    # Check if an employee is already logged in
     if 'current_employee_id' in request.session:
         try:
             current_employee = Employee.objects.get(id=request.session['current_employee_id'])
@@ -34,7 +44,6 @@ def dashboard(request):
             current_employee = None
 
     if request.method == 'POST':
-        # Handle login via username/password text input
         if not current_employee:
             username = request.POST.get('username')
             password = request.POST.get('password')
@@ -42,7 +51,7 @@ def dashboard(request):
             if username and password:
                 try:
                     employee = Employee.objects.get(username=username)
-                    if employee.password == password:
+                    if check_password(password, employee.password):
                         current_employee = employee
                         request.session['current_employee_id'] = employee.id
                         return redirect('dashboard')
@@ -50,7 +59,6 @@ def dashboard(request):
                     current_employee = None
                     request.session.pop('current_employee_id', None)
 
-        # Handle actions for an authenticated employee
         if current_employee:
             action = request.POST.get('action')
             if action:
@@ -65,13 +73,17 @@ def dashboard(request):
                     if not latest_record or latest_record.clock_out:
                         create_new_record = True
                     elif latest_record and not latest_record.clock_out:
+                        
+                        lunch_button_label = "Stop Lunch" if (latest_record.lunch_start and not latest_record.lunch_end) else "Start Lunch"
+                        
                         return render(request, 'dashboard.html', {
                             'error_message': 'You have already clocked in. Please clock out from your previous session first.',
                             'employees': Employee.objects.all(),
                             'current_employee': current_employee,
                             'time_records': TimeRecord.objects.filter(employee=current_employee),
                             'current_datetime': current_time,
-                            'status': 'Clocked In'
+                            'status': 'Clocked In',
+                            'lunch_button_label': lunch_button_label
                         })
 
                 if create_new_record:
@@ -92,14 +104,13 @@ def dashboard(request):
                         latest_record.lunch_end = current_time.time()
                     latest_record.save()
 
-    # Get current employee from session if it exists
     if not current_employee and 'current_employee_id' in request.session:
         try:
             current_employee = Employee.objects.get(id=request.session['current_employee_id'])
         except Employee.DoesNotExist:
             current_employee = None
 
-    # Determine the status
+
     status = "Pending"
     lunch_button_label = "Start Lunch"
     if current_employee:
@@ -176,7 +187,7 @@ def calculate_lunch_duration(record):
         return f"{minutes} minute{'s' if minutes != 1 else ''}"
     return "N/A"
 
-def export_pdf(request):
+def export_pdf(request, pk):
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="timerecords.pdf"'
 
@@ -189,62 +200,65 @@ def export_pdf(request):
 
     p = canvas.Canvas(response, pagesize=letter)
 
-    current_employee_id = request.session.get('current_employee_id')
+    try:
+        current_employee = Employee.objects.get(id=pk)
+        records = TimeRecord.objects.filter(employee=current_employee)
+        full_name = f"{current_employee.first_name} {current_employee.last_name}"
 
-    if current_employee_id:
-        try:
-            current_employee = Employee.objects.get(id=current_employee_id)
-            records = TimeRecord.objects.filter(employee=current_employee)
+        icon_path = os.path.join(settings.BASE_DIR, 'TimeKeeping_App', 'static', 'images', 'icon-3.jpg')
+        icon_x = margin
+        icon_y = page_height - margin - 14
 
-            full_name = f"{current_employee.first_name} {current_employee.last_name}"
+        p.setFont("Helvetica-Bold", 24)
+        title_text = "Academe TS"
+        title_width = p.stringWidth(title_text, "Helvetica-Bold", 24)
+        title_x = (page_width - title_width) / 2
 
-            # Draw Header with Icon
-            icon_path = os.path.join(settings.BASE_DIR, 'TimeKeeping_App', 'static', 'images', 'icon-3.jpg')
-            icon_x = margin
-            icon_y = page_height - margin - 14
+        spacing = 5
+        image_width = 42
+        title_width = p.stringWidth(title_text, "Helvetica-Bold", 31)
+        total_width = image_width + spacing + title_width
+        start_x = (page_width - total_width) / 2
+        text_y = page_height - margin - 6
 
-            p.setFont("Helvetica-Bold", 24)
-            title_text = "Academe TS"
-            spacing = 5 
-            image_width = 42
-            title_width = p.stringWidth(title_text, "Helvetica-Bold", 31)
-            total_width = image_width + spacing + title_width
-            start_x = (page_width - total_width) / 2
-            text_y = page_height - margin - 6
+        p.drawImage(icon_path, start_x, icon_y, width=image_width, height=30)
+        p.drawString(start_x + image_width + spacing, text_y, title_text)
 
-            p.drawImage(icon_path, start_x, icon_y, width=image_width, height=30)
-            p.drawString(start_x + image_width + spacing, text_y, title_text)
+        p.setFont("Helvetica", 12)
+        subtitle_text = "GOCLOUD Asia, Inc."
+        subtitle_width = p.stringWidth(subtitle_text, "Helvetica", 12)
+        subtitle_y_position = page_height - margin - 25
+        p.drawString((page_width - subtitle_width) / 2, subtitle_y_position, subtitle_text)
 
-            p.setFont("Helvetica", 12)
-            subtitle_text = "GOCLOUD Asia, Inc."
-            subtitle_width = p.stringWidth(subtitle_text, "Helvetica", 12)
-            subtitle_y_position = page_height - margin - 25
-            p.drawString((page_width - subtitle_width) / 2, subtitle_y_position, subtitle_text)
+        p.setFont("Helvetica-Bold", 12)
+        employee_name_label_text = "Employee Name:"
+        employee_name_label_width = p.stringWidth(employee_name_label_text, "Helvetica-Bold", 12)
+        employee_name_label_y_position = subtitle_y_position - 25
+        p.drawString((page_width - employee_name_label_width) / 2, employee_name_label_y_position, employee_name_label_text)
+        
+        p.setFont("Helvetica", 12)
+        employee_name_width = p.stringWidth(full_name, "Helvetica", 12)
+        employee_name_y_position = employee_name_label_y_position - 20
+        p.drawString((page_width - employee_name_width) / 2, employee_name_y_position, full_name)
 
-            p.setFont("Helvetica-Bold", 12)
-            employee_name_label_text = "Employee Name:"
-            employee_name_label_width = p.stringWidth(employee_name_label_text, "Helvetica-Bold", 12)
-            employee_name_label_y_position = subtitle_y_position - 25
-            p.drawString((page_width - employee_name_label_width) / 2, employee_name_label_y_position, employee_name_label_text)
-
-            p.setFont("Helvetica", 12)
-            employee_name_text = full_name
-            employee_name_width = p.stringWidth(employee_name_text, "Helvetica", 12)
-            employee_name_y_position = employee_name_label_y_position - 20
-            p.drawString((page_width - employee_name_width) / 2, employee_name_y_position, employee_name_text)
-
-            # Prepare Table Data
-            data = [["Date", "Clock In", "Clock Out", "Total Hours"]]
-            for record in records:
-                data.append([
-                    format_date(record.date),
-                    format_time(record.clock_in),
-                    format_time(record.clock_out),
-                    calculate_duration(record)
-                ])
-
-            # Create Table
-            table = Table(data, colWidths=[content_width * 0.25] * 4, repeatRows=1)
+        table_y_position = page_height - margin - top_margin_for_table
+        
+        data = [["Date", "Clock In", "Clock Out", "Total Hours"]]
+        for record in records:
+            data.append([
+                format_date(record.date),
+                format_time(record.clock_in),
+                format_time(record.clock_out),
+                calculate_duration(record)
+            ])
+        
+        available_height = table_y_position - (margin + 20)
+        rows_per_page = int(available_height / 20)
+        
+        start_row = 1
+        while start_row < len(data):
+            table_chunk = [data[0]] + data[start_row:start_row + rows_per_page]
+            table = Table(table_chunk, colWidths=[content_width * 0.25] * 4)
             table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -257,85 +271,43 @@ def export_pdf(request):
                 ('RIGHTPADDING', (0, 0), (-1, -1), 2),
                 ('BACKGROUND', (0, 1), (-1, -1), colors.white),
             ]))
+            
+            table.wrapOn(p, content_width, available_height)
+            table.drawOn(p, margin, table_y_position - (len(table_chunk) * 20))
+            
+            start_row += rows_per_page
+            if start_row < len(data):
+                p.showPage()
+                table_y_position = page_height - margin - top_margin_for_table
+        
+        signature_y = margin + 70
+        center_x = page_width / 2
+        line_width = 200
+        employee_signature_x = center_x - (line_width + 40)
+        supervisor_signature_x = center_x + 40
 
-            # Calculate table dimensions and position
-            table_width, table_height = table.wrap(content_width, max_table_height)
-            table_x = (page_width - table_width) / 2
-            table_y = employee_name_y_position - table_height - 20
+        p.line(employee_signature_x, signature_y, employee_signature_x + line_width, signature_y)
+        p.line(supervisor_signature_x, signature_y, supervisor_signature_x + line_width, signature_y)
 
-            # Split data into pages
-            rows_per_page = int((max_table_height - top_margin_for_table) / 20)  # Approximate rows that fit per page
-            total_rows = len(data)
-            current_row = 0
-            is_first_page = True
+        employee_text_width = p.stringWidth("Signature of Employee", "Helvetica", 10)
+        supervisor_text_width = p.stringWidth("Signature of Supervisor", "Helvetica", 10)
 
-            while current_row < total_rows:
-                if not is_first_page:
-                    p.showPage()
-                    # Redraw header on new page
-                    p.setFont("Helvetica-Bold", 24)
-                    title_text = "Academe TS"
-                    p.drawImage(icon_path, start_x, icon_y, width=image_width, height=30)
-                    p.drawString(start_x + image_width + spacing, text_y, title_text)
+        employee_text_x = employee_signature_x + (line_width - employee_text_width) / 2.5
+        supervisor_text_x = supervisor_signature_x + (line_width - supervisor_text_width) / 2.5
 
-                    p.setFont("Helvetica", 12)
-                    p.drawString((page_width - subtitle_width) / 2, subtitle_y_position, subtitle_text)
+        p.drawString(employee_text_x, signature_y - 12, "Signature of Employee")
+        p.drawString(supervisor_text_x, signature_y - 12, "Signature of Supervisor")
+        
+        p.save()
+    except Employee.DoesNotExist:
+        p.drawString(margin, page_height - margin, "No records were found.")
+        p.save()
 
-                    p.setFont("Helvetica-Bold", 12)
-                    p.drawString((page_width - employee_name_label_width) / 2, employee_name_label_y_position, employee_name_label_text)
-
-                    p.setFont("Helvetica", 12)
-                    p.drawString((page_width - employee_name_width) / 2, employee_name_y_position, employee_name_text)
-
-                end_row = min(current_row + rows_per_page, total_rows)
-                page_data = data[current_row:end_row]
-                if current_row == 0:
-                    page_data = data[:end_row]  # Include header row on first page
-                else:
-                    page_data.insert(0, data[0])  # Add header row to each page
-
-                page_table = Table(page_data, colWidths=[content_width * 0.25] * 4)
-                page_table.setStyle(TableStyle([
-                    ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                    ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
-                    ('TOPPADDING', (0, 0), (-1, -1), 4),
-                    ('LEFTPADDING', (0, 0), (-1, -1), 2),
-                    ('RIGHTPADDING', (0, 0), (-1, -1), 2),
-                    ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-                ]))
-
-                # Draw the table for this page
-                page_table_width, page_table_height = page_table.wrap(content_width, max_table_height)
-                table_y = employee_name_y_position - page_table_height - 20
-                page_table.drawOn(p, table_x, table_y)
-
-                # Add signature section only on the last page
-                if end_row >= total_rows:
-                    signature_y = table_y - 100
-                    center_x = page_width / 2
-                    p.line(center_x - 240, signature_y, center_x - 40, signature_y)  # Employee
-                    p.line(center_x + 40, signature_y, center_x + 240, signature_y)  # Supervisor
-                    p.setFont("Helvetica", 10)
-                    p.drawString(center_x - 180, signature_y - 12, "Signature of Employee")
-                    p.drawString(center_x + 100, signature_y - 12, "Signature of Supervisor")
-
-                current_row = end_row
-                is_first_page = False
-
-        except Employee.DoesNotExist:
-            p.drawString(margin, page_height - margin, "No records were found.")
-    else:
-        p.drawString(margin, page_height - margin, "No employee entries found.")
-
-    p.save()
     return response
 
+
 def logout_view(request):
-    request.session.flush()  
+    request.session.pop('current_employee_id', None)  
     return redirect('dashboard')
 
 def admin_dashboard(request):
@@ -358,6 +330,7 @@ def admin_dashboard(request):
         'error_message': error_message,
     })
 
+
 class EmployeeRecord(UserPassesTestMixin, View):
     def test_func(self):
         return self.request.user.is_superuser
@@ -367,9 +340,189 @@ class EmployeeRecord(UserPassesTestMixin, View):
 
     def get(self, request, pk):
         employee = get_object_or_404(Employee, pk=pk)
-        time_records = TimeRecord.objects.filter(employee=employee)
-        return render(request, "view_records.html", {"employee": employee, "time_records": time_records})
+        
+        datefrom = request.GET.get('datefrom')
+        dateto = request.GET.get('dateto')
+
+        if datefrom and dateto:
+            time_records = TimeRecord.objects.filter(employee=employee, date__gte=datefrom, date__lte=dateto)
+        else:
+            time_records = TimeRecord.objects.filter(employee=employee)
+
+        return render(request, "view_records.html", {
+            "employee": employee, 
+            "user": request.user,
+            "is_authenticated": request.user.is_authenticated,
+            "time_records": time_records
+        })
+
     
 def logout_admin(request):
     request.session.flush()  
     return redirect('admin_dashboard')
+
+def export_excel(request, pk):
+    employee = get_object_or_404(Employee, pk=pk)
+    records = TimeRecord.objects.filter(employee=employee)
+
+    data = []
+    for record in records:
+        data.append({
+            'Date': record.date,
+            'Clock In': format_time(record.clock_in),
+            'Clock Out': format_time(record.clock_out),
+            'Lunch Break Hours': calculate_lunch_duration(record),
+            'Total Hours': calculate_duration(record)
+        })
+    
+    df = pd.DataFrame(data)
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="employee_{employee.username}_time_records.xlsx"'
+
+    with pd.ExcelWriter(response, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Time Records')
+    
+    return response
+
+def create_employee(request):
+    if request.method == "POST":
+        form = EmployeeCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("admin_dashboard")  
+    else:
+        form = EmployeeCreationForm()
+
+    employees = Employee.objects.all()
+    return render(request, "admin_dashboard.html", {"form": form, "employees": employees})
+
+
+def view_user_info(request, employee_id):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return HttpResponseForbidden("You do not have permission to access this page.")
+
+    employee = get_object_or_404(Employee, id=employee_id)
+
+    if request.method == 'POST':
+        form = EmployeeCreationForm(request.POST, instance=employee)
+        if form.is_valid():
+            form.save() 
+            return redirect('view_user_info', employee_id=employee.id)  
+    else:
+        form = EmployeeCreationForm(instance=employee)  
+    return render(request, 'view_user_info.html', {'employee': employee, 'form': form})
+
+
+from django.contrib import messages  
+
+
+def change_password(request):
+    error_message = None
+    employee_id = request.session.get('current_employee_id')
+
+    if not employee_id:
+        messages.error(request, "No employee found in session. Please log in.")
+        return redirect('dashboard')
+
+    try:
+        employee = Employee.objects.get(id=employee_id)
+    except Employee.DoesNotExist:
+        messages.error(request, "Employee not found. Please contact admin.")
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = ChangePasswordForm(request.POST)
+        if form.is_valid():
+            old_password = form.cleaned_data['old_password']
+            new_password = form.cleaned_data['new_password']
+            confirm_password = form.cleaned_data['confirm_password']
+
+            if not check_password(old_password, employee.password):
+                error_message = 'Current password is incorrect.'
+            elif new_password != confirm_password:
+                error_message = 'New passwords do not match.'
+            else:
+                employee.password = make_password(new_password)
+                employee.save()
+                # Clear any existing messages before adding new one
+                storage = messages.get_messages(request)
+                storage.used = True
+                messages.success(request, 'Password changed successfully!')
+                return redirect('dashboard')
+    else:
+        form = ChangePasswordForm()
+
+    return render(request, 'change_password.html', {
+        'form': form,
+        'error_message': error_message
+    })
+
+def forgot_password(request):
+    error_message = None
+
+    if request.method == 'POST':
+        form = ResetPasswordEmailForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            try:
+                employee = Employee.objects.get(email=email)
+                reset_code = employee.generate_reset_code()
+                request.session['reset_email'] = email
+                
+                messages.success(request, 'Reset code has been sent to your email.')
+                return redirect('reset_password')
+            except Employee.DoesNotExist:
+                error_message = 'No account found with this email.'
+    else:
+        form = ResetPasswordEmailForm()
+
+    return render(request, 'forgot_password.html', {
+        'form': form,
+        'error_message': error_message
+    })
+
+def reset_password(request):
+    error_message = None
+
+    if 'reset_email' not in request.session:
+        messages.error(request, 'Please provide your email first.')
+        return redirect('forgot_password')
+
+    email = request.session['reset_email']
+
+    if request.method == 'POST':
+        form = ResetPasswordForm(request.POST)
+        if form.is_valid():
+            code = form.cleaned_data['code']
+            new_password = form.cleaned_data['new_password']
+            confirm_password = form.cleaned_data['confirm_password']
+
+            try:
+                employee = Employee.objects.get(
+                    email=email,
+                    reset_code=code,
+                    reset_code_expiry__gt=timezone.now()
+                )
+
+                if new_password != confirm_password:
+                    error_message = 'Passwords do not match.'
+                else:
+                    employee.password = make_password(new_password)
+                    employee.reset_code = None
+                    employee.reset_code_expiry = None
+                    employee.save()
+
+                    del request.session['reset_email']
+                    messages.success(request, 'Password reset successfully!')
+                    return redirect('dashboard')
+
+            except Employee.DoesNotExist:
+                error_message = 'Invalid or expired reset code.'
+    else:
+        form = ResetPasswordForm()
+
+    return render(request, 'reset_password.html', {
+        'form': form,
+        'error_message': error_message
+    })
