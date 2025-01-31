@@ -21,7 +21,7 @@ class EmployeeUpdateForm(forms.ModelForm):
         employee = super().save(commit=False)
         if commit:
             employee.save()
- jeorge2
+            
         return employee
     
 
@@ -39,6 +39,4 @@ class ResetPasswordForm(forms.Form):
     code = forms.CharField(max_length=6)
     new_password = forms.CharField(widget=forms.PasswordInput())
     confirm_password = forms.CharField(widget=forms.PasswordInput())
-=======
-        return employee
- try
+
