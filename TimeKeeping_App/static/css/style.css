@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
 html, body {
+    font-family: 'Poppins', sans-serif;
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -10,7 +11,6 @@ html, body {
 
 .main {
     flex-grow: 1;
-
     padding-bottom: 20px;
 }
 
@@ -28,23 +28,6 @@ html, body {
 
 .footer-content-area, .footer-copyright {
     background-color: #c1c1c1;
-}
-
-.main, .navbar-custom, .footer-custom {
-    font-family: 'Poppins', sans-serif;
-}
-
-#jazzy-logo{
-    color: #fff;
-}
-
-.jazzmin-login-page {
-    background-image: linear-gradient(to right, rgba(0,123,255,1), rgba(32, 201, 151, 1)) !important;
-}
-
-.login-box-msg {
-    font-size: 20px;
-    font-weight: bold;
 }
 
 .container { 
