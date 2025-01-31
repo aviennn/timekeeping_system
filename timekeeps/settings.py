@@ -80,7 +80,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'timekeeping_system', 
         'USER': 'root',  
-        'PASSWORD': 'ssadwq0010',  
+        'PASSWORD': 'put database password here',  
         'HOST': 'localhost',  
         'PORT': '3306',  
     }
@@ -191,9 +191,9 @@ JAZZMIN_SETTINGS = {
 
     # UI TWEAKS
 
-    "custom_css": "style.css",
+    "custom_css": "css/jazzmin.css",
     #"custom_js": None,
-    #"use_google_fonts_cdn": True,
+    "use_google_fonts_cdn": True,
     "show_ui_builder": True,
 
     # CHANGE VIEW
