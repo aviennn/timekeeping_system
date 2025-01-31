@@ -6,7 +6,7 @@ from .models import Employee, TimeRecord
 from datetime import datetime
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from django.shortcuts import redirect
+from django.shortcuts import render, redirect
 from django.views import View
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth import authenticate, login
@@ -22,7 +22,13 @@ import os
 import pandas as pd
 from .forms import EmployeeCreationForm
 from .models import Employee
-from django.shortcuts import render, redirect
+from django.contrib import messages  
+from .forms import EmployeeUpdateForm
+from django.contrib import messages
+from django.contrib.auth.hashers import check_password, make_password
+from django.utils import timezone
+from .forms import ChangePasswordForm, ResetPasswordEmailForm, ResetPasswordForm
+from .models import Employee
 from django.contrib.auth.hashers import check_password
 
 
@@ -444,3 +450,137 @@ def delete_employee(request, employee_id):
     employee.delete()
 
     return redirect('admin_dashboard') 
+
+
+
+def change_password(request):
+    error_message = None
+    employee_id = request.session.get('current_employee_id')
+
+    if not employee_id:
+        messages.error(request, "No employee found in session. Please log in.")
+        return redirect('dashboard')
+
+    try:
+        employee = Employee.objects.get(id=employee_id)
+    except Employee.DoesNotExist:
+        messages.error(request, "Employee not found. Please contact admin.")
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = ChangePasswordForm(request.POST)
+        if form.is_valid():
+            old_password = form.cleaned_data['old_password']
+            new_password = form.cleaned_data['new_password']
+            confirm_password = form.cleaned_data['confirm_password']
+
+            if not check_password(old_password, employee.password):
+                error_message = 'Current password is incorrect.'
+            elif new_password != confirm_password:
+                error_message = 'New passwords do not match.'
+            else:
+                employee.password = make_password(new_password)
+                employee.save()
+                # Clear any existing messages before adding new one
+                storage = messages.get_messages(request)
+                storage.used = True
+                messages.success(request, 'Password changed successfully!')
+                return redirect('dashboard')
+    else:
+        form = ChangePasswordForm()
+
+    return render(request, 'change_password.html', {
+        'form': form,
+        'error_message': error_message
+    })
+
+def forgot_password(request):
+    error_message = None
+
+    if request.method == 'POST':
+        form = ResetPasswordEmailForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            try:
+                employee = Employee.objects.get(email=email)
+                reset_code = employee.generate_reset_code()
+                request.session['reset_email'] = email
+                
+                messages.success(request, 'Reset code has been sent to your email.')
+                return redirect('reset_password')
+            except Employee.DoesNotExist:
+                error_message = 'No account found with this email.'
+    else:
+        form = ResetPasswordEmailForm()
+
+    return render(request, 'forgot_password.html', {
+        'form': form,
+        'error_message': error_message
+    })
+
+def reset_password(request):
+    error_message = None
+
+    if 'reset_email' not in request.session:
+        messages.error(request, 'Please provide your email first.')
+        return redirect('forgot_password')
+
+    email = request.session['reset_email']
+
+    if request.method == 'POST':
+        form = ResetPasswordForm(request.POST)
+        if form.is_valid():
+            code = form.cleaned_data['code']
+            new_password = form.cleaned_data['new_password']
+            confirm_password = form.cleaned_data['confirm_password']
+
+            try:
+                employee = Employee.objects.get(
+                    email=email,
+                    reset_code=code,
+                    reset_code_expiry__gt=timezone.now()
+                )
+
+                if new_password != confirm_password:
+                    error_message = 'Passwords do not match.'
+                else:
+                    employee.password = make_password(new_password)
+                    employee.reset_code = None
+                    employee.reset_code_expiry = None
+                    employee.save()
+
+                    del request.session['reset_email']
+                    messages.success(request, 'Password reset successfully!')
+                    return redirect('dashboard')
+
+            except Employee.DoesNotExist:
+                error_message = 'Invalid or expired reset code.'
+    else:
+        form = ResetPasswordForm()
+
+    return render(request, 'reset_password.html', {
+        'form': form,
+        'error_message': error_message
+    })
+    
+
+def change_employee_password(request, employee_id):
+    employee = get_object_or_404(Employee, id=employee_id)
+
+    if request.method == 'POST':
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+
+        if new_password and new_password == confirm_password:
+            employee.password = make_password(new_password)
+            employee.save()
+
+            storage = messages.get_messages(request)
+            storage.used = True
+
+            messages.success(request, f"Password for {employee.first_name} {employee.last_name} has been updated successfully.")
+            return redirect('admin_dashboard')  
+        else:
+            messages.error(request, "Passwords do not match. Please try again.")
+
+    return render(request, 'change_employee_password.html', {'employee': employee})

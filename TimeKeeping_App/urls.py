@@ -12,4 +12,9 @@ urlpatterns = [
     path("create-employee/", views.create_employee, name="create_employee"),
     path('view_user_info/<int:employee_id>/', views.view_user_info, name='view_user_info'),
     path('delete_employee/<int:employee_id>/', views.delete_employee, name='delete_employee'),
+    path('change-password/', views.change_password, name='change_password'),
+    path('forgot-password/', views.forgot_password, name='forgot_password'),
+    path('reset-password/', views.reset_password, name='reset_password'),
+    path('change_employee_password/<int:employee_id>/', views.change_employee_password, name='change_employee_password'),
+
 ]

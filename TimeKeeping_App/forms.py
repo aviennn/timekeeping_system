@@ -22,3 +22,18 @@ class EmployeeUpdateForm(forms.ModelForm):
         if commit:
             employee.save()
         return employee
+    
+
+
+class ChangePasswordForm(forms.Form):
+    old_password = forms.CharField(widget=forms.PasswordInput())
+    new_password = forms.CharField(widget=forms.PasswordInput())
+    confirm_password = forms.CharField(widget=forms.PasswordInput())
+
+class ResetPasswordEmailForm(forms.Form):
+    email = forms.EmailField()
+
+class ResetPasswordForm(forms.Form):
+    code = forms.CharField(max_length=6)
+    new_password = forms.CharField(widget=forms.PasswordInput())
+    confirm_password = forms.CharField(widget=forms.PasswordInput())
