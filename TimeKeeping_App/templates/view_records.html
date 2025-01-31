@@ -87,6 +87,7 @@
                             <th>Clock Out</th>
                             <th>Lunch Break Hours</th>
                             <th>Total Hours</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -97,6 +98,11 @@
                             <td>{{ record.clock_out|time:"g:i A" }}</td>
                             <td>{{ record.lunch_break_duration }}</td>
                             <td>{{ record.total_hours }}</td>
+                            <td>
+                                <a href="{% url 'edit_time_record' pk=record.id %}" class="btn btn-sm btn-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </td>                            
                         </tr>
                         {% endfor %}
                     </tbody>

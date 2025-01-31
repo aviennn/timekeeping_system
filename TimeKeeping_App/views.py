@@ -23,14 +23,13 @@ import pandas as pd
 from .forms import EmployeeCreationForm
 from .models import Employee
 from django.contrib import messages  
-from .forms import EmployeeUpdateForm
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
 from django.utils import timezone
 from .forms import ChangePasswordForm, ResetPasswordEmailForm, ResetPasswordForm
 from .models import Employee
 from django.contrib.auth.hashers import check_password
-
+from .forms import TimeRecordForm
 
 def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
@@ -584,3 +583,16 @@ def change_employee_password(request, employee_id):
             messages.error(request, "Passwords do not match. Please try again.")
 
     return render(request, 'change_employee_password.html', {'employee': employee})
+
+def edit_time_record(request, pk):
+    record = get_object_or_404(TimeRecord, pk=pk)
+    
+    if request.method == "POST":
+        form = TimeRecordForm(request.POST, instance=record)
+        if form.is_valid():
+            form.save()
+            return redirect('view_records', pk=record.employee.id) 
+    else:
+        form = TimeRecordForm(instance=record)
+
+    return render(request, 'edit_time_record.html', {'form': form, 'record': record})

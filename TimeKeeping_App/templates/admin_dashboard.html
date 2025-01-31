@@ -174,7 +174,13 @@
                             <tr>
                                 <td>{{ employee.username }}</td>
                                 <td>{{ employee.first_name }}</td>
-                                <td>{{ employee.middle_name }}</td>
+                                <td>
+                                    {% if employee.middle_name %}
+                                        {{ employee.middle_name }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
                                 <td>{{ employee.last_name }}</td>
                                 <td>{{ employee.email }}</td>
                                 <td>{{ employee.joined_date }}</td>
