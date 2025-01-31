@@ -11,4 +11,5 @@ urlpatterns = [
     path('export_excel/<int:pk>/', views.export_excel, name='export_excel'),
     path("create-employee/", views.create_employee, name="create_employee"),
     path('view_user_info/<int:employee_id>/', views.view_user_info, name='view_user_info'),
+    path('delete_employee/<int:employee_id>/', views.delete_employee, name='delete_employee'),
 ]
