@@ -3,6 +3,12 @@ from django.utils import timezone
 from datetime import datetime
 from django.contrib.auth.hashers import make_password
 
+from django.core.mail import send_mail
+import random
+import string
+
+
+
 
 class Employee(models.Model):
     first_name = models.CharField(max_length=50)
@@ -11,7 +17,9 @@ class Employee(models.Model):
     email = models.EmailField(unique=True)
     joined_date = models.DateField(default=timezone.now)
     username = models.CharField(max_length=100, unique=True, editable=False)
-    password = models.CharField(max_length=100, editable=False)
+    password = models.CharField(max_length=100)
+    reset_code = models.CharField(max_length=6, null=True, blank=True)
+    reset_code_expiry = models.DateTimeField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.username:
@@ -21,6 +29,16 @@ class Employee(models.Model):
             self.username = f"{year}-{self.last_name}{self.first_name}-{formatted_id}".replace(" ", "")
         
         if not self.password:
+
+            self.password = make_password(self.username)
+
+        if self.pk:  
+            original = Employee.objects.get(pk=self.pk)
+            if original.first_name != self.first_name or original.last_name != self.last_name:
+                year = self.joined_date.year
+                formatted_id = f"{self.id:04d}"
+                self.username = f"{year}-{self.last_name}{self.first_name}-{formatted_id}".replace(" ", "")
+
             self.password = make_password(self.username) 
 
         if self.pk:  
@@ -30,11 +48,29 @@ class Employee(models.Model):
                     formatted_id = f"{self.id:04d}"
                     self.username = f"{year}-{self.last_name}{self.first_name}-{formatted_id}".replace(" ", "")
                     self.password = make_password(self.username)
+
         
         super().save(*args, **kwargs)
 
+    def generate_reset_code(self):
+        code = ''.join(random.choices(string.digits, k=6))
+        self.reset_code = code
+        self.reset_code_expiry = timezone.now() + timezone.timedelta(minutes=15)
+        self.save()
+        
+        # Send email with reset code
+        send_mail(
+            'Password Reset Code',
+            f'Your password reset code is: {code}\nThis code will expire in 15 minutes.',
+            'academetsmain@gmail.com',
+            [self.email],
+            fail_silently=False,
+        )
+        return code
+
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
+
 
 
 class TimeRecord(models.Model):

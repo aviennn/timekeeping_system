@@ -72,12 +72,21 @@
             <form method="GET" action="{% url 'view_records' pk=employee.id %}" class="mb-4">
                 {% csrf_token %}
                 <label for="datefrom">From:</label>
+
+                <input type="date" id="datefrom" name="datefrom">
+                <label for="dateto">To:</label>
+                <input type="date" id="dateto" name="dateto">
+                <button type="submit">Filter</button>
+            </form>
+    
+
                 <input type="date" id="datefrom" name="datefrom" value="{{request.GET.datefrom}}">
                 <label for="dateto">To:</label>
                 <input type="date" id="dateto" name="dateto" value="{{request.GET.dateto}}">
                 <button type="submit">Filter</button>
             </form>
             
+
             <div class="table-responsive">
                 <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
                     <thead>
@@ -104,7 +113,11 @@
             </div>
         </div>
     </div>
+
+    <a href="{% url 'admin_dashboard' %}" class="btn btn-primary">Back</a>
+
     
+
     {% else %}
         <p>No time records available for this employee.</p>
     {% endif %}

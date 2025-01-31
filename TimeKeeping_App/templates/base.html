@@ -56,4 +56,32 @@
         <script src="{% static 'js/jquery.dataTables.js' %}"></script>
         <script src="{% static 'js/datatables.js' %}"></script>
     </body>
+
+    <!-- dunno what a good position for this sorry nlng palitan nlng later -->
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+
+        <script>
+            // Auto-dismiss messages after 5 seconds
+            document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(function() {
+                    const messages = document.querySelectorAll('.alert');
+                    messages.forEach(function(message) {
+                        message.style.transition = 'opacity 0.5s';
+                        message.style.opacity = '0';
+                        setTimeout(function() {
+                            message.remove();
+                        }, 500);
+                    });
+                }, 5000);
+            });
+        </script>
+    {% endif %}
+
 </html>
