@@ -2,9 +2,13 @@ from django.db import models
 from django.utils import timezone
 from datetime import datetime
 from django.contrib.auth.hashers import make_password
+
 from django.core.mail import send_mail
 import random
 import string
+
+
+
 
 class Employee(models.Model):
     first_name = models.CharField(max_length=50)
@@ -25,6 +29,7 @@ class Employee(models.Model):
             self.username = f"{year}-{self.last_name}{self.first_name}-{formatted_id}".replace(" ", "")
         
         if not self.password:
+
             self.password = make_password(self.username)
 
         if self.pk:  
@@ -33,6 +38,17 @@ class Employee(models.Model):
                 year = self.joined_date.year
                 formatted_id = f"{self.id:04d}"
                 self.username = f"{year}-{self.last_name}{self.first_name}-{formatted_id}".replace(" ", "")
+
+            self.password = make_password(self.username) 
+
+        if self.pk:  
+                original = Employee.objects.get(pk=self.pk)
+                if original.first_name != self.first_name or original.last_name != self.last_name:
+                    year = self.joined_date.year
+                    formatted_id = f"{self.id:04d}"
+                    self.username = f"{year}-{self.last_name}{self.first_name}-{formatted_id}".replace(" ", "")
+                    self.password = make_password(self.username)
+
         
         super().save(*args, **kwargs)
 
