@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {{ employee.username }} | User Information 
+{% endblock %}
+
+{% block content %}
+    <h2>{{ employee.first_name }} {% if employee.middle_name %}{{ employee.middle_name }} {% endif %}{{ employee.last_name }} | User Information</h2>
+    <p><strong>First Name:</strong> {{ employee.first_name }}</p>
+    <p><strong>Middle Name:</strong> {{ employee.middle_name }}</p>
+    <p><strong>Last Name:</strong> {{ employee.last_name }}</p>
+    <p><strong>Email:</strong> {{ employee.email }}</p>
+    <p><strong>Date Joined:</strong> {{ employee.joined_date }}</p>
+    
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#editEmployeeModal">
+        Edit
+    </button>
+
+    <div class="modal fade" id="editEmployeeModal" tabindex="-1" role="dialog" aria-labelledby="editEmployeeModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editEmployeeModalLabel">Edit Employee Info</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="{% url 'view_user_info' employee.id %}">
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        <button type="submit" class="btn btn-primary">Save changes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <a href="{% url 'admin_dashboard' %}" class="btn btn-primary">Back</a>
+{% endblock %}

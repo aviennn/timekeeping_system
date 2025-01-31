@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Time Record{% endblock %}
+
+{% block content %}
+    <h2>Edit Time Record for {{ record.employee }}</h2>
+    
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-outline-success">Save Changes</button>
+        <a href="{% url 'view_records' pk=record.employee.id %}" class="btn btn-outline-danger">Cancel</a>
+    </form>
+{% endblock %}

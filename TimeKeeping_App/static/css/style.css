@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
 html, body {
+    font-family: 'Poppins', sans-serif;
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -10,7 +11,6 @@ html, body {
 
 .main {
     flex-grow: 1;
-
     padding-bottom: 20px;
 }
 
@@ -28,38 +28,6 @@ html, body {
 
 .footer-content-area, .footer-copyright {
     background-color: #c1c1c1;
-}
-
-@media (max-width: 768px) {
-    .footer-logos {
-        flex-direction: column !important;
-        align-items: center;
-    }
-
-    .logo-img-ats {
-        height: 25px;
-    }
-
-    .logo-img-gc {
-        height: 35px;
-    }
-}
-
-.main, .navbar-custom, .footer-custom {
-    font-family: 'Poppins', sans-serif;
-}
-
-#jazzy-logo{
-    color: #fff;
-}
-
-.jazzmin-login-page {
-    background-image: linear-gradient(to right, rgba(0,123,255,1), rgba(32, 201, 151, 1)) !important;
-}
-
-.login-box-msg {
-    font-size: 20px;
-    font-weight: bold;
 }
 
 .container { 
@@ -119,7 +87,6 @@ select, .password-container input[type="password"], .password-container input[ty
     display: inline-block;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     background: linear-gradient(135deg, #007bff, #18bc9c);
-    width: 100%;
 }
 
 .time {
@@ -132,21 +99,23 @@ select, .password-container input[type="password"], .password-container input[ty
     margin-bottom: 10px;
 }
 
-@media (max-width: 768px) {
-    .time {
-        font-size: 2.5rem;
-    }
-
-    .date {
-        font-size: 1.2rem;
-    }
-}
-
 #btn-back-to-top {
     position: fixed;
     bottom: 20px;
     right: 20px;
     display: none;
+    background-color: #007bff;
+    border: #007bff;
+}
+
+#btn-back-to-top:hover {
+    background-color: #18bc9c;
+    border: #18bc9c;
+}
+
+#btn-back-to-top:active {
+    background-color: #139b80;
+    border: #139b80;
 }
 
 .navbar .dropdown-menu {
@@ -189,30 +158,14 @@ html, body {
     background-color: #c1c1c1;
 }
 
-@media (max-width: 768px) {
-    .footer-logos {
-        flex-direction: column !important;
-        align-items: center;
-    }
-
-    .logo-img-ats {
-        height: 25px;
-    }
-
-    .logo-img-gc {
-        height: 35px;
-    }
-}
-
-
 .gc-link:hover {
     font-weight: bold;
     text-decoration: none;
 }
 
-.category-header, .category-header-2 {
+.category-header {
     background: linear-gradient(to right, #89c2d9, #a3d9a5);
-    border-radius: 15px;
+    border-radius: 24px;
     padding: 20px;
     display: flex;
     align-items: center;
@@ -237,41 +190,14 @@ html, body {
     margin-bottom: 0;
 }
 
-.category-header h1, .category-header-2 h1 {
+.category-header h1 {
     margin: 5px 0 0;
 }
 
-.category-header img, .category-header-2 img {
+.category-header img {
     height: 150px;
     width: auto;
     padding-right: 20px;
-}
-
-@media (max-width: 768px) {
-    .category-header, .category-header-2 {
-        flex-direction: column;
-        text-align: center;
-        max-width: 100%;
-        padding: 15px;
-    }
-
-    .text-section {
-        padding-left: 0;
-    }
-
-    .welcome-text {
-        font-size: 1rem;
-    }
-
-    .category-header h1, .category-header-2 h1 {
-        font-size: 1.8rem;
-    }
-
-    .category-header img, .category-header-2 img {
-        height: 80px;
-        padding-right: 0;
-        margin-top: 10px;
-    }
 }
 
 .employee-info {
@@ -288,27 +214,6 @@ html, body {
     font-size: 1.1rem;
     color: #333;
     margin: 5px 0;
-}
-
-@media (max-width: 768px) {
-    .employee-info {
-        max-width: 100%;
-        padding: 12px 15px;
-    }
-
-    .employee-info p {
-        font-size: 1rem;
-    }
-
-    .employee-title {
-        font-size: 1.3rem;
-    }
-
-    .icon-box {
-        width: 40px;
-        height: 40px;
-        font-size: 1.3rem;
-    }
 }
 
 .employee-title {
@@ -329,4 +234,185 @@ html, body {
     height: 50px;
     border-radius: 10px;
     font-size: 1.5rem;
+}
+
+.tall-btn {
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 15px !important;
+}
+
+.success-custom {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+}
+
+.danger-custom {
+    background: linear-gradient(135deg, #dc3545, #a71d2a);
+}
+
+.warning-custom {
+    background: linear-gradient(135deg, #ffc107, #ff9800);
+}
+
+.success-custom:hover {
+    background: linear-gradient(135deg, #1e7e34, #155d27);
+}
+
+.danger-custom:hover {
+    background: linear-gradient(135deg, #a71d2a, #79151d);
+}
+
+.warning-custom:hover {
+    background: linear-gradient(135deg, #ff9800, #cc7a00);
+}
+
+.status-text-area-1, .status-text-area-2 {
+    border-radius :30px;
+}
+
+.status-text-area-1 {
+    background-color:#8cc4d3;
+}
+
+.status-text-area-2 {
+    background-color:#a2d8a7;
+}
+
+.status-text {
+    background-color: #fff;
+    border-radius :20px;
+}
+
+.status-icon {
+    background-color: #fff;
+    padding: 1px 6px;
+    border-radius: 50px;
+}
+
+.sorry-area {
+    padding-top: 100px;
+    padding-bottom: 100px;
+}
+
+.sorry-img {
+    width: 40%;
+}
+
+@media (max-width: 1280px) {
+    .footer-logos {
+        flex-direction: column !important;
+        align-items: center;
+    }
+
+    .logo-img-ats {
+        height: 25px;
+    }
+
+    .logo-img-gc {
+        height: 35px;
+    }
+
+    .time {
+        font-size: 2.5rem;
+    }
+
+    .date {
+        font-size: 1.2rem;
+    }
+
+    .footer-logos {
+        flex-direction: column !important;
+        align-items: center;
+    }
+
+    .logo-img-ats {
+        height: 25px;
+    }
+
+    .logo-img-gc {
+        height: 35px;
+    }
+
+    .category-header {
+        flex-direction: column;
+        text-align: center;
+        max-width: 100%;
+        padding: 15px;
+    }
+
+    .text-section {
+        padding-left: 0;
+    }
+
+    .welcome-text {
+        font-size: 1rem;
+    }
+
+    .category-header h1 {
+        font-size: 1.8rem;
+    }
+
+    .category-header img {
+        height: 80px;
+        padding-right: 0;
+        margin-top: 10px;
+    }
+
+    .employee-info {
+        max-width: 100%;
+        padding: 12px 15px;
+    }
+
+    .employee-info p {
+        font-size: 1rem;
+    }
+
+    .employee-title {
+        font-size: 1.3rem;
+    }
+
+    .icon-box {
+        padding: 20px;
+        font-size: 1.3rem;
+    }
+}
+
+@media (min-width: 640px) and (max-width: 768px) {
+    #clock {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
+
+@media (min-width: 960px) {
+    #clock {
+        flex: 0 0 83.3333%;
+        max-width: 83.3333%;
+    }
+}
+
+@media (min-width: 1024px) and (max-width: 1536px) {
+    #clock {
+        flex: 0 0 66.6667%;
+        max-width: 66.6667%;
+    }
+}
+
+@media (min-width: 1745px) {
+    #clock {
+        flex: 0 0 41.6667%;
+        max-width: 41.6667%;
+    }
+}
+
+@media (min-width: 384px) and (max-width: 640px) {
+    .time {
+        font-size: 2.5rem !important;
+    }
+
+    .date {
+        font-size: 1rem !important;
+    }
 }

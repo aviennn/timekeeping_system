@@ -6,7 +6,7 @@ from .models import Employee, TimeRecord
 from datetime import datetime
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from django.shortcuts import redirect
+from django.shortcuts import render, redirect
 from django.views import View
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth import authenticate, login
@@ -20,7 +20,16 @@ from django.templatetags.static import static
 from django.conf import settings
 import os
 import pandas as pd
-
+from .forms import EmployeeCreationForm
+from .models import Employee
+from django.contrib import messages  
+from django.contrib import messages
+from django.contrib.auth.hashers import check_password, make_password
+from django.utils import timezone
+from .forms import ChangePasswordForm, ResetPasswordEmailForm, ResetPasswordForm
+from .models import Employee
+from django.contrib.auth.hashers import check_password
+from .forms import TimeRecordForm
 
 def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
@@ -41,7 +50,7 @@ def dashboard(request):
             if username and password:
                 try:
                     employee = Employee.objects.get(username=username)
-                    if employee.password == password:
+                    if check_password(password, employee.password):
                         current_employee = employee
                         request.session['current_employee_id'] = employee.id
                         return redirect('dashboard')
@@ -101,7 +110,7 @@ def dashboard(request):
             current_employee = None
 
 
-    status = "Pending"
+    status = "Awaiting Status"
     lunch_button_label = "Start Lunch"
     if current_employee:
         today = current_time.date()
@@ -190,8 +199,18 @@ def export_pdf(request, pk):
 
     try:
         current_employee = Employee.objects.get(id=pk)
-        records = TimeRecord.objects.filter(employee=current_employee)
         full_name = f"{current_employee.first_name} {current_employee.last_name}"
+
+        # Get date range from request
+        start_date = request.GET.get('datefrom')
+        end_date = request.GET.get('dateto')
+
+        # Filter records based on date range
+        if start_date and end_date:
+            records = TimeRecord.objects.filter(employee=current_employee, date__range=[start_date, end_date]).order_by('date')
+        else:
+            records = TimeRecord.objects.filter(employee=current_employee).order_by('date')  # Default: All records
+
 
         icon_path = os.path.join(settings.BASE_DIR, 'TimeKeeping_App', 'static', 'images', 'icon-3.jpg')
         icon_x = margin
@@ -229,6 +248,17 @@ def export_pdf(request, pk):
         employee_name_y_position = employee_name_label_y_position - 20
         p.drawString((page_width - employee_name_width) / 2, employee_name_y_position, full_name)
 
+        # Add date range display
+        if start_date and end_date:
+            date_range_text = f"Date Range: {start_date} to {end_date}"
+        else:
+            date_range_text = "All Records"
+        
+        p.setFont("Helvetica", 11)
+        date_range_width = p.stringWidth(date_range_text, "Helvetica", 11)
+        p.drawString((page_width - date_range_width) / 2, employee_name_y_position - 20, date_range_text)
+
+
         table_y_position = page_height - margin - top_margin_for_table
         
         data = [["Date", "Clock In", "Clock Out", "Total Hours"]]
@@ -242,11 +272,15 @@ def export_pdf(request, pk):
         
         available_height = table_y_position - (margin + 20)
         rows_per_page = int(available_height / 20)
+
+        # Calculate column width so they are equally spaced
+        num_columns = len(data[0])  # 5 columns
+        column_width = content_width / num_columns  # Evenly divide available width
         
         start_row = 1
         while start_row < len(data):
             table_chunk = [data[0]] + data[start_row:start_row + rows_per_page]
-            table = Table(table_chunk, colWidths=[content_width * 0.25] * 4)
+            table = Table(table_chunk, colWidths=[column_width] * num_columns)  
             table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -296,7 +330,7 @@ def export_pdf(request, pk):
 
 
 def logout_view(request):
-    request.session.flush()  
+    request.session.pop('current_employee_id', None)  
     return redirect('dashboard')
 
 def admin_dashboard(request):
@@ -319,6 +353,7 @@ def admin_dashboard(request):
         'error_message': error_message,
     })
 
+
 class EmployeeRecord(UserPassesTestMixin, View):
     def test_func(self):
         return self.request.user.is_superuser
@@ -328,13 +363,22 @@ class EmployeeRecord(UserPassesTestMixin, View):
 
     def get(self, request, pk):
         employee = get_object_or_404(Employee, pk=pk)
-        time_records = TimeRecord.objects.filter(employee=employee)
+        
+        datefrom = request.GET.get('datefrom')
+        dateto = request.GET.get('dateto')
+
+        if datefrom and dateto:
+            time_records = TimeRecord.objects.filter(employee=employee, date__gte=datefrom, date__lte=dateto)
+        else:
+            time_records = TimeRecord.objects.filter(employee=employee)
+
         return render(request, "view_records.html", {
             "employee": employee, 
             "user": request.user,
             "is_authenticated": request.user.is_authenticated,
             "time_records": time_records
         })
+
     
 def logout_admin(request):
     request.session.flush()  
@@ -342,7 +386,14 @@ def logout_admin(request):
 
 def export_excel(request, pk):
     employee = get_object_or_404(Employee, pk=pk)
-    records = TimeRecord.objects.filter(employee=employee)
+    
+    start_date = request.GET.get('datefrom')
+    end_date = request.GET.get('dateto')
+
+    if start_date and end_date:
+        records = TimeRecord.objects.filter(employee=employee, date__range=[start_date, end_date]).order_by('date')
+    else:
+        records = TimeRecord.objects.filter(employee=employee).order_by('date')  # Default: All records sorted by date
 
     data = []
     for record in records:
@@ -363,3 +414,185 @@ def export_excel(request, pk):
         df.to_excel(writer, index=False, sheet_name='Time Records')
     
     return response
+
+def create_employee(request):
+    if request.method == "POST":
+        form = EmployeeCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("admin_dashboard")  
+    else:
+        form = EmployeeCreationForm()
+
+    employees = Employee.objects.all()
+    return render(request, "admin_dashboard.html", {"form": form, "employees": employees})
+
+
+def view_user_info(request, employee_id):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return HttpResponseForbidden("You do not have permission to access this page.")
+
+    employee = get_object_or_404(Employee, id=employee_id)
+
+    if request.method == 'POST':
+        form = EmployeeCreationForm(request.POST, instance=employee)
+        if form.is_valid():
+            form.save() 
+            return redirect('view_user_info', employee_id=employee.id)  
+    else:
+        form = EmployeeCreationForm(instance=employee)  
+    return render(request, 'view_user_info.html', {'employee': employee, 'form': form})
+
+def delete_employee(request, employee_id):
+    employee = get_object_or_404(Employee, id=employee_id)
+    
+    employee.delete()
+
+    return redirect('admin_dashboard') 
+
+
+
+def change_password(request):
+    error_message = None
+    employee_id = request.session.get('current_employee_id')
+
+    if not employee_id:
+        messages.error(request, "No employee found in session. Please log in.")
+        return redirect('dashboard')
+
+    try:
+        employee = Employee.objects.get(id=employee_id)
+    except Employee.DoesNotExist:
+        messages.error(request, "Employee not found. Please contact admin.")
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = ChangePasswordForm(request.POST)
+        if form.is_valid():
+            old_password = form.cleaned_data['old_password']
+            new_password = form.cleaned_data['new_password']
+            confirm_password = form.cleaned_data['confirm_password']
+
+            if not check_password(old_password, employee.password):
+                error_message = 'Current password is incorrect.'
+            elif new_password != confirm_password:
+                error_message = 'New passwords do not match.'
+            else:
+                employee.password = make_password(new_password)
+                employee.save()
+                # Clear any existing messages before adding new one
+                storage = messages.get_messages(request)
+                storage.used = True
+                messages.success(request, 'Password changed successfully!')
+                return redirect('dashboard')
+    else:
+        form = ChangePasswordForm()
+
+    return render(request, 'change_password.html', {
+        'form': form,
+        'error_message': error_message
+    })
+
+def forgot_password(request):
+    error_message = None
+
+    if request.method == 'POST':
+        form = ResetPasswordEmailForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            try:
+                employee = Employee.objects.get(email=email)
+                reset_code = employee.generate_reset_code()
+                request.session['reset_email'] = email
+                
+                messages.success(request, 'Reset code has been sent to your email.')
+                return redirect('reset_password')
+            except Employee.DoesNotExist:
+                error_message = 'No account found with this email.'
+    else:
+        form = ResetPasswordEmailForm()
+
+    return render(request, 'forgot_password.html', {
+        'form': form,
+        'error_message': error_message
+    })
+
+def reset_password(request):
+    error_message = None
+
+    if 'reset_email' not in request.session:
+        messages.error(request, 'Please provide your email first.')
+        return redirect('forgot_password')
+
+    email = request.session['reset_email']
+
+    if request.method == 'POST':
+        form = ResetPasswordForm(request.POST)
+        if form.is_valid():
+            code = form.cleaned_data['code']
+            new_password = form.cleaned_data['new_password']
+            confirm_password = form.cleaned_data['confirm_password']
+
+            try:
+                employee = Employee.objects.get(
+                    email=email,
+                    reset_code=code,
+                    reset_code_expiry__gt=timezone.now()
+                )
+
+                if new_password != confirm_password:
+                    error_message = 'Passwords do not match.'
+                else:
+                    employee.password = make_password(new_password)
+                    employee.reset_code = None
+                    employee.reset_code_expiry = None
+                    employee.save()
+
+                    del request.session['reset_email']
+                    messages.success(request, 'Password reset successfully!')
+                    return redirect('dashboard')
+
+            except Employee.DoesNotExist:
+                error_message = 'Invalid or expired reset code.'
+    else:
+        form = ResetPasswordForm()
+
+    return render(request, 'reset_password.html', {
+        'form': form,
+        'error_message': error_message
+    })
+    
+
+def change_employee_password(request, employee_id):
+    employee = get_object_or_404(Employee, id=employee_id)
+
+    if request.method == 'POST':
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+
+        if new_password and new_password == confirm_password:
+            employee.password = make_password(new_password)
+            employee.save()
+
+            storage = messages.get_messages(request)
+            storage.used = True
+
+            messages.success(request, f"Password for {employee.first_name} {employee.last_name} has been updated successfully.")
+            return redirect('admin_dashboard')  
+        else:
+            messages.error(request, "Passwords do not match. Please try again.")
+
+    return render(request, 'change_employee_password.html', {'employee': employee})
+
+def edit_time_record(request, pk):
+    record = get_object_or_404(TimeRecord, pk=pk)
+    
+    if request.method == "POST":
+        form = TimeRecordForm(request.POST, instance=record)
+        if form.is_valid():
+            form.save()
+            return redirect('view_records', pk=record.employee.id) 
+    else:
+        form = TimeRecordForm(instance=record)
+
+    return render(request, 'edit_time_record.html', {'form': form, 'record': record})
