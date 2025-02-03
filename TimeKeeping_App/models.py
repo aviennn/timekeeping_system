@@ -6,7 +6,29 @@ from django.core.mail import send_mail
 import random
 import string
 
-class Employee(models.Model):
+class SoftDelete(models.Model):
+    is_deleted = models.BooleanField(default=False)
+
+    def soft_delete(self):
+        self.is_deleted = True
+        self.save()
+
+    def restore(self):
+        self.is_deleted = False
+        self.save()
+
+    def delete(self, *args, **kwargs):
+        self.soft_delete()
+        
+    class Meta:
+        abstract = True
+
+class EmployeeManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
+
+
+class Employee(SoftDelete, models.Model):
     first_name = models.CharField(max_length=50)
     middle_name = models.CharField(max_length=50, null=True, blank=True)
     last_name = models.CharField(max_length=50)
@@ -16,6 +38,8 @@ class Employee(models.Model):
     password = models.CharField(max_length=100)
     reset_code = models.CharField(max_length=6, null=True, blank=True)
     reset_code_expiry = models.DateTimeField(null=True, blank=True)
+    
+    objects = EmployeeManager()
 
     def save(self, *args, **kwargs):
         if not self.username:
@@ -58,14 +82,19 @@ class Employee(models.Model):
         return f"{self.first_name} {self.last_name}"
 
 
+class TimeRecordManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
 
-class TimeRecord(models.Model):
+class TimeRecord(SoftDelete, models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
     date = models.DateField(default=timezone.now)
     clock_in = models.TimeField(null=True, blank=True)
     clock_out = models.TimeField(null=True, blank=True)
     lunch_start = models.TimeField(null=True, blank=True)
     lunch_end = models.TimeField(null=True, blank=True)
+    
+    objects = TimeRecordManager()
 
     @property
     def lunch_break_duration(self):
@@ -107,4 +136,5 @@ class TimeRecord(models.Model):
 
     def __str__(self):
         return f"TimeRecord for {self.employee} on {self.date}"
+    
 
