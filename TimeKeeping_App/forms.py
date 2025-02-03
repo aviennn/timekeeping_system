@@ -13,6 +13,17 @@ class EmployeeCreationForm(forms.ModelForm):
             employee.save()
         return employee
 
+class TimeRecordCreationForm(forms.ModelForm):
+    class Meta:
+        model = TimeRecord
+        fields = ['date', 'clock_in', 'clock_out', 'lunch_start', 'lunch_end']
+
+    def save(self, commit=True):
+        timerecord = super().save(commit=False)
+        if commit:
+            timerecord.save()
+        return timerecord
+    
 class TimeRecordForm(forms.ModelForm):
     class Meta:
         model = TimeRecord

@@ -16,5 +16,6 @@ urlpatterns = [
     path('forgot-password/', views.forgot_password, name='forgot_password'),
     path('reset-password/', views.reset_password, name='reset_password'),
     path('change_employee_password/<int:employee_id>/', views.change_employee_password, name='change_employee_password'),
-    path('edit_time_record/<int:pk>/', views.edit_time_record, name='edit_time_record')
+    path('edit_time_record/<int:pk>/', views.edit_time_record, name='edit_time_record'),
+    path("create_timerecord/<int:pk>/", views.create_timerecord, name="create_timerecord")
 ]

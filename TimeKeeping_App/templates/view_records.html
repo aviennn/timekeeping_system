@@ -62,6 +62,51 @@
         <p class="text-secondary"><b>Full Name:</b> {{ employee.first_name }} {{ employee.last_name }}</p>
     </div>
 
+
+    <div class="mb-3">
+        <button type="button" class="btn btn-success" data-toggle="modal" data-target="#addTimeRecordModal">
+            <i class="fas fa-plus"></i> Add Time Record
+        </button>
+    </div>
+
+    <div class="modal fade" id="addTimeRecordModal" tabindex="-1" aria-labelledby="addTimeRecordModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addTimeRecordModalLabel">Add Time Record</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form method="post" action="{% url 'create_timerecord' pk=employee.id %}">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="date">Date</label>
+                            <input type="date" class="form-control" name="date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="clock_in">Clock In</label>
+                            <input type="time" class="form-control" name="clock_in" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="clock_out">Clock Out</label>
+                            <input type="time" class="form-control" name="clock_out">
+                        </div>
+                        <div class="form-group">
+                            <label for="lunch_start">Lunch Start</label>
+                            <input type="time" class="form-control" name="lunch_start">
+                        </div>
+                        <div class="form-group">
+                            <label for="lunch_end">Lunch End</label>
+                            <input type="time" class="form-control" name="lunch_end">
+                        </div>                        
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
     {% if time_records %}    
     <div class="card shadow mb-4">
         <div class="card-header bg-secondary py-3">
