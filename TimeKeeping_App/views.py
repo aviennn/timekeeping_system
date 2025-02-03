@@ -461,15 +461,26 @@ def view_user_info(request, employee_id):
         return HttpResponseForbidden("You do not have permission to access this page.")
 
     employee = get_object_or_404(Employee, id=employee_id)
+    show_modal = False 
 
     if request.method == 'POST':
         form = EmployeeCreationForm(request.POST, instance=employee)
         if form.is_valid():
-            form.save() 
-            return redirect('view_user_info', employee_id=employee.id)  
+            form.save()
+            messages.success(request, "Employee details updated successfully!")
+            return redirect('view_user_info', employee_id=employee.id)
+        else:
+            messages.error(request, "Failed to update employee. Please fix the errors in the form.")
+            show_modal = True
+            employee.refresh_from_db()
     else:
-        form = EmployeeCreationForm(instance=employee)  
-    return render(request, 'view_user_info.html', {'employee': employee, 'form': form})
+        form = EmployeeCreationForm(instance=employee)
+
+    return render(request, 'view_user_info.html', {
+        'employee': employee,
+        'form': form,
+        'show_modal': show_modal
+    })
 
 #def delete_employee(request, employee_id):
 #    employee = get_object_or_404(Employee, id=employee_id)
