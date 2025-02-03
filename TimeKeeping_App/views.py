@@ -31,6 +31,7 @@ from .models import Employee
 from django.contrib.auth.hashers import check_password
 from .forms import TimeRecordForm
 from .forms import TimeRecordCreationForm
+from django.contrib.auth.decorators import login_required
 
 def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
@@ -418,17 +419,25 @@ def export_excel(request, pk):
     
     return response
 
+@login_required(login_url='admin_dashboard')
 def create_employee(request):
     if request.method == "POST":
         form = EmployeeCreationForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect("admin_dashboard")  
+            messages.success(request, "Employee created successfully!")
+            return redirect("admin_dashboard")
+        else:
+            messages.error(request, "Failed to create employee. Please fix the errors in the form.")
     else:
         form = EmployeeCreationForm()
 
     employees = Employee.objects.all()
-    return render(request, "admin_dashboard.html", {"form": form, "employees": employees})
+    return render(request, "admin_dashboard.html", {
+        "form": form,
+        "employees": employees,
+        "is_authenticated": request.user.is_authenticated 
+    })
 
 
 def create_timerecord(request, pk):
@@ -440,6 +449,7 @@ def create_timerecord(request, pk):
             time_record = form.save(commit=False)  
             time_record.employee = employee  
             time_record.save()  
+            messages.success(request, "Time record created successfully!")
             return redirect("view_records", pk=employee.id)  
     else:
         form = TimeRecordCreationForm()
