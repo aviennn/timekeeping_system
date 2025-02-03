@@ -368,6 +368,8 @@ class EmployeeRecord(UserPassesTestMixin, View):
         datefrom = request.GET.get('datefrom')
         dateto = request.GET.get('dateto')
 
+        time_records = TimeRecord.objects.filter(employee=employee, is_deleted=False)
+
         if datefrom and dateto:
             time_records = TimeRecord.objects.filter(employee=employee, date__gte=datefrom, date__lte=dateto)
         else:
@@ -459,12 +461,12 @@ def view_user_info(request, employee_id):
         form = EmployeeCreationForm(instance=employee)  
     return render(request, 'view_user_info.html', {'employee': employee, 'form': form})
 
-def delete_employee(request, employee_id):
-    employee = get_object_or_404(Employee, id=employee_id)
+#def delete_employee(request, employee_id):
+#    employee = get_object_or_404(Employee, id=employee_id)
     
-    employee.delete()
+#    employee.delete()
 
-    return redirect('admin_dashboard') 
+#    return redirect('admin_dashboard') 
 
 
 
@@ -612,3 +614,16 @@ def edit_time_record(request, pk):
         form = TimeRecordForm(instance=record)
 
     return render(request, 'edit_time_record.html', {'form': form, 'record': record})
+
+def delete_time_record(request, pk):
+    record = get_object_or_404(TimeRecord, pk=pk)
+    record.soft_delete()
+    messages.success(request, "Time record deleted successfully.")
+    return redirect('view_records', pk=record.employee.id)
+
+
+def delete_employee(request, pk):
+    record = get_object_or_404(Employee, pk=pk)
+    record.soft_delete()
+    messages.success(request, "Employee record deleted successfully.")
+    return redirect('admin_dashboard')
