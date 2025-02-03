@@ -30,6 +30,7 @@ from .forms import ChangePasswordForm, ResetPasswordEmailForm, ResetPasswordForm
 from .models import Employee
 from django.contrib.auth.hashers import check_password
 from .forms import TimeRecordForm
+from .forms import TimeRecordCreationForm
 
 def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
@@ -427,6 +428,21 @@ def create_employee(request):
     employees = Employee.objects.all()
     return render(request, "admin_dashboard.html", {"form": form, "employees": employees})
 
+
+def create_timerecord(request, pk):
+    employee = get_object_or_404(Employee, id=pk)  
+
+    if request.method == "POST":
+        form = TimeRecordCreationForm(request.POST)
+        if form.is_valid():
+            time_record = form.save(commit=False)  
+            time_record.employee = employee  
+            time_record.save()  
+            return redirect("view_records", pk=employee.id)  
+    else:
+        form = TimeRecordCreationForm()
+
+    return render(request, "create_timerecord.html", {"form": form, "employee": employee})
 
 def view_user_info(request, employee_id):
     if not request.user.is_authenticated or not request.user.is_superuser:
