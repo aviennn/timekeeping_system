@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    {% if is_authenticated %}
-    {{ user.username }} |  Academe TS
+    {% if user.is_authenticated %}
+        {{ user.username }} | Academe TS
     {% else %}
-    Log In |  Academe TS
+        Log In | Academe TS
     {% endif %}
 {% endblock %}
 
@@ -22,7 +22,7 @@
 
             <div class="collapse navbar-collapse" id="navbarNavDropdown">
                 <ul class="navbar-nav ms-auto ml-auto">
-                    {% if is_authenticated %}
+                    {% if user.is_authenticated %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             {{ user.username }}
@@ -45,8 +45,8 @@
 
 {% block content %}
 
-    {% if is_authenticated %}
-        <div class="category-header">
+{% if user.is_authenticated %}
+    <div class="category-header">
             <div class="text-section">
                 <p class="welcome-text">Welcome, <b>{{ user.username }}!</b></p>
                 <h1><b>Employee List</b></h1>
@@ -56,7 +56,7 @@
         {% if messages %}
         <div class="alert-container">
             {% for message in messages %}
-                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
                     {{ message }}
                     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
@@ -131,26 +131,53 @@
                     <div class="modal-body">
                         <form method="post" action="{% url 'create_employee' %}">
                             {% csrf_token %}
+                            
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger">
+                                    {{ form.non_field_errors }}
+                                </div>
+                            {% endif %}
+                    
                             <div class="form-group">
                                 <label for="first_name">First Name</label>
-                                <input type="text" class="form-control" name="first_name" required>
+                                <input type="text" class="form-control {% if form.first_name.errors %}is-invalid{% endif %}" name="first_name" value="{{ form.first_name.value }}" required>
+                                {% for error in form.first_name.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
                             </div>
+                    
                             <div class="form-group">
                                 <label for="middle_name">Middle Name</label>
-                                <input type="text" class="form-control" name="middle_name">
+                                <input type="text" class="form-control {% if form.middle_name.errors %}is-invalid{% endif %}" name="middle_name" value="{{ form.middle_name.value }}">
+                                {% for error in form.middle_name.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
                             </div>
+                    
                             <div class="form-group">
                                 <label for="last_name">Last Name</label>
-                                <input type="text" class="form-control" name="last_name" required>
+                                <input type="text" class="form-control {% if form.last_name.errors %}is-invalid{% endif %}" name="last_name" value="{{ form.last_name.value }}" required>
+                                {% for error in form.last_name.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
                             </div>
+                    
                             <div class="form-group">
                                 <label for="email">Email</label>
-                                <input type="email" class="form-control" name="email" required>
+                                <input type="email" class="form-control {% if form.email.errors %}is-invalid{% endif %}" name="email" value="{{ form.email.value }}" required>
+                                {% for error in form.email.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
                             </div>
+                    
                             <div class="form-group">
                                 <label for="joined_date">Joined Date</label>
-                                <input type="date" class="form-control" name="joined_date" required>
+                                <input type="date" class="form-control {% if form.joined_date.errors %}is-invalid{% endif %}" name="joined_date" value="{{ form.joined_date.value }}" required>
+                                {% for error in form.joined_date.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
                             </div>
+                    
                             <button type="submit" class="btn btn-primary">Create Employee</button>
                         </form>
                     </div>

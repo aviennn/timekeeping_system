@@ -31,6 +31,7 @@ from .models import Employee
 from django.contrib.auth.hashers import check_password
 from .forms import TimeRecordForm
 from .forms import TimeRecordCreationForm
+from django.contrib.auth.decorators import login_required
 
 def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
@@ -80,7 +81,7 @@ def dashboard(request):
                             'error_message': 'You have already clocked in. Please clock out from your previous session first.',
                             'employees': Employee.objects.all(),
                             'current_employee': current_employee,
-                            'time_records': TimeRecord.objects.filter(employee=current_employee),
+                            'time_records': TimeRecord.objects.all(),
                             'current_datetime': current_time,
                             'status': 'Clocked In',
                             'lunch_button_label': lunch_button_label
@@ -418,17 +419,25 @@ def export_excel(request, pk):
     
     return response
 
+@login_required(login_url='admin_dashboard')
 def create_employee(request):
     if request.method == "POST":
         form = EmployeeCreationForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect("admin_dashboard")  
+            messages.success(request, "Employee created successfully!")
+            return redirect("admin_dashboard")
+        else:
+            messages.error(request, "Failed to create employee. Please fix the errors in the form.")
     else:
         form = EmployeeCreationForm()
 
     employees = Employee.objects.all()
-    return render(request, "admin_dashboard.html", {"form": form, "employees": employees})
+    return render(request, "admin_dashboard.html", {
+        "form": form,
+        "employees": employees,
+        "is_authenticated": request.user.is_authenticated 
+    })
 
 
 def create_timerecord(request, pk):
@@ -440,6 +449,7 @@ def create_timerecord(request, pk):
             time_record = form.save(commit=False)  
             time_record.employee = employee  
             time_record.save()  
+            messages.success(request, "Time record created successfully!")
             return redirect("view_records", pk=employee.id)  
     else:
         form = TimeRecordCreationForm()
@@ -451,15 +461,26 @@ def view_user_info(request, employee_id):
         return HttpResponseForbidden("You do not have permission to access this page.")
 
     employee = get_object_or_404(Employee, id=employee_id)
+    show_modal = False 
 
     if request.method == 'POST':
         form = EmployeeCreationForm(request.POST, instance=employee)
         if form.is_valid():
-            form.save() 
-            return redirect('view_user_info', employee_id=employee.id)  
+            form.save()
+            messages.success(request, "Employee details updated successfully!")
+            return redirect('view_user_info', employee_id=employee.id)
+        else:
+            messages.error(request, "Failed to update employee. Please fix the errors in the form.")
+            show_modal = True
+            employee.refresh_from_db()
     else:
-        form = EmployeeCreationForm(instance=employee)  
-    return render(request, 'view_user_info.html', {'employee': employee, 'form': form})
+        form = EmployeeCreationForm(instance=employee)
+
+    return render(request, 'view_user_info.html', {
+        'employee': employee,
+        'form': form,
+        'show_modal': show_modal
+    })
 
 #def delete_employee(request, employee_id):
 #    employee = get_object_or_404(Employee, id=employee_id)
@@ -606,12 +627,12 @@ def edit_time_record(request, pk):
     record = get_object_or_404(TimeRecord, pk=pk)
     
     if request.method == "POST":
-        form = TimeRecordForm(request.POST, instance=record)
+        form = TimeRecordCreationForm(request.POST, instance=record)
         if form.is_valid():
             form.save()
             return redirect('view_records', pk=record.employee.id) 
     else:
-        form = TimeRecordForm(instance=record)
+        form = TimeRecordCreationForm(instance=record)
 
     return render(request, 'edit_time_record.html', {'form': form, 'record': record})
 

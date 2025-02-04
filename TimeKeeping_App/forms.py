@@ -18,10 +18,18 @@ class EmployeeCreationForm(forms.ModelForm):
         for field_name, field in self.fields.items():
             field.widget.attrs.update({'class': 'form-control'})
 
+    
 class TimeRecordCreationForm(forms.ModelForm):
     class Meta:
         model = TimeRecord
         fields = ['date', 'clock_in', 'clock_out', 'lunch_start', 'lunch_end']
+        widgets = {
+            'date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'clock_in': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+            'clock_out': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+            'lunch_start': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+            'lunch_end': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+        }
 
     def save(self, commit=True):
         timerecord = super().save(commit=False)
