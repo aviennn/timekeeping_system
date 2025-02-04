@@ -30,6 +30,8 @@ from .forms import ChangePasswordForm, ResetPasswordEmailForm, ResetPasswordForm
 from .models import Employee
 from django.contrib.auth.hashers import check_password
 from .forms import TimeRecordForm
+from .forms import TimeRecordCreationForm
+from django.contrib.auth.decorators import login_required
 
 def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
@@ -41,6 +43,8 @@ def dashboard(request):
             current_employee = Employee.objects.get(id=request.session['current_employee_id'])
         except Employee.DoesNotExist:
             current_employee = None
+
+    error_message = None
 
     if request.method == 'POST':
         if not current_employee:
@@ -72,18 +76,29 @@ def dashboard(request):
                     if not latest_record or latest_record.clock_out:
                         create_new_record = True
                     elif latest_record and not latest_record.clock_out:
+                        error_message = 'You have already clocked in. Please clock out from your previous session first.'
+
+                elif action == 'clock_out' and latest_record:
+                    if latest_record.lunch_start and not latest_record.lunch_end:
+                        error_message = 'Please end your lunch break before clocking out.'
+                    elif not latest_record.clock_out:
+                        latest_record.clock_out = current_time.time()
+                        latest_record.save()
+
+                elif action == 'lunch_toggle':
+                    if not latest_record or latest_record.clock_out:
+                        error_message = 'Please clock in before starting your lunch break.'
+                    else:
+                        if not latest_record.lunch_start:
+                            latest_record.lunch_start = current_time.time()
+                            latest_record.lunch_end = None
+                        elif not latest_record.lunch_end:
+                            latest_record.lunch_end = current_time.time()
+                        else:
+                            error_message = 'You have already taken your lunch break for today.'
                         
-                        lunch_button_label = "Stop Lunch" if (latest_record.lunch_start and not latest_record.lunch_end) else "Start Lunch"
-                        
-                        return render(request, 'dashboard.html', {
-                            'error_message': 'You have already clocked in. Please clock out from your previous session first.',
-                            'employees': Employee.objects.all(),
-                            'current_employee': current_employee,
-                            'time_records': TimeRecord.objects.filter(employee=current_employee),
-                            'current_datetime': current_time,
-                            'status': 'Clocked In',
-                            'lunch_button_label': lunch_button_label
-                        })
+                        if not error_message:
+                            latest_record.save()
 
                 if create_new_record:
                     TimeRecord.objects.create(
@@ -91,24 +106,12 @@ def dashboard(request):
                         date=today,
                         clock_in=current_time.time()
                     )
-                elif action == 'clock_out' and latest_record:
-                    if not latest_record.clock_out:
-                        latest_record.clock_out = current_time.time()
-                        latest_record.save()
-                elif action == 'lunch_toggle' and latest_record:
-                    if not latest_record.lunch_start:
-                        latest_record.lunch_start = current_time.time()
-                        latest_record.lunch_end = None
-                    elif not latest_record.lunch_end:
-                        latest_record.lunch_end = current_time.time()
-                    latest_record.save()
 
     if not current_employee and 'current_employee_id' in request.session:
         try:
             current_employee = Employee.objects.get(id=request.session['current_employee_id'])
         except Employee.DoesNotExist:
             current_employee = None
-
 
     status = "Awaiting Status"
     lunch_button_label = "Start Lunch"
@@ -136,9 +139,9 @@ def dashboard(request):
         'time_records': TimeRecord.objects.filter(employee=current_employee).order_by('-date', '-clock_in') if current_employee else [],
         'current_datetime': current_time,
         'status': status,
-        'lunch_button_label': lunch_button_label
+        'lunch_button_label': lunch_button_label,
+        'error_message': error_message
     })
-
 
 def format_time(time_value):
     if time_value:
@@ -368,6 +371,8 @@ class EmployeeRecord(UserPassesTestMixin, View):
         datefrom = request.GET.get('datefrom')
         dateto = request.GET.get('dateto')
 
+        time_records = TimeRecord.objects.filter(employee=employee, is_deleted=False)
+
         if datefrom and dateto:
             time_records = TimeRecord.objects.filter(employee=employee, date__gte=datefrom, date__lte=dateto)
         else:
@@ -416,40 +421,75 @@ def export_excel(request, pk):
     
     return response
 
+@login_required(login_url='admin_dashboard')
 def create_employee(request):
     if request.method == "POST":
         form = EmployeeCreationForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect("admin_dashboard")  
+            messages.success(request, "Employee created successfully!")
+            return redirect("admin_dashboard")
+        else:
+            messages.error(request, "Failed to create employee. Please fix the errors in the form.")
     else:
         form = EmployeeCreationForm()
 
     employees = Employee.objects.all()
-    return render(request, "admin_dashboard.html", {"form": form, "employees": employees})
+    return render(request, "admin_dashboard.html", {
+        "form": form,
+        "employees": employees,
+        "is_authenticated": request.user.is_authenticated 
+    })
 
+
+def create_timerecord(request, pk):
+    employee = get_object_or_404(Employee, id=pk)  
+
+    if request.method == "POST":
+        form = TimeRecordCreationForm(request.POST)
+        if form.is_valid():
+            time_record = form.save(commit=False)  
+            time_record.employee = employee  
+            time_record.save()  
+            messages.success(request, "Time record created successfully!")
+            return redirect("view_records", pk=employee.id)  
+    else:
+        form = TimeRecordCreationForm()
+
+    return render(request, "create_timerecord.html", {"form": form, "employee": employee})
 
 def view_user_info(request, employee_id):
     if not request.user.is_authenticated or not request.user.is_superuser:
         return HttpResponseForbidden("You do not have permission to access this page.")
 
     employee = get_object_or_404(Employee, id=employee_id)
+    show_modal = False 
 
     if request.method == 'POST':
         form = EmployeeCreationForm(request.POST, instance=employee)
         if form.is_valid():
-            form.save() 
-            return redirect('view_user_info', employee_id=employee.id)  
+            form.save()
+            messages.success(request, "Employee details updated successfully!")
+            return redirect('view_user_info', employee_id=employee.id)
+        else:
+            messages.error(request, "Failed to update employee. Please fix the errors in the form.")
+            show_modal = True
+            employee.refresh_from_db()
     else:
-        form = EmployeeCreationForm(instance=employee)  
-    return render(request, 'view_user_info.html', {'employee': employee, 'form': form})
+        form = EmployeeCreationForm(instance=employee)
 
-def delete_employee(request, employee_id):
-    employee = get_object_or_404(Employee, id=employee_id)
+    return render(request, 'view_user_info.html', {
+        'employee': employee,
+        'form': form,
+        'show_modal': show_modal
+    })
+
+#def delete_employee(request, employee_id):
+#    employee = get_object_or_404(Employee, id=employee_id)
     
-    employee.delete()
+#    employee.delete()
 
-    return redirect('admin_dashboard') 
+#    return redirect('admin_dashboard') 
 
 
 
@@ -589,11 +629,24 @@ def edit_time_record(request, pk):
     record = get_object_or_404(TimeRecord, pk=pk)
     
     if request.method == "POST":
-        form = TimeRecordForm(request.POST, instance=record)
+        form = TimeRecordCreationForm(request.POST, instance=record)
         if form.is_valid():
             form.save()
             return redirect('view_records', pk=record.employee.id) 
     else:
-        form = TimeRecordForm(instance=record)
+        form = TimeRecordCreationForm(instance=record)
 
     return render(request, 'edit_time_record.html', {'form': form, 'record': record})
+
+def delete_time_record(request, pk):
+    record = get_object_or_404(TimeRecord, pk=pk)
+    record.soft_delete()
+    messages.success(request, "Time record deleted successfully.")
+    return redirect('view_records', pk=record.employee.id)
+
+
+def delete_employee(request, pk):
+    record = get_object_or_404(Employee, pk=pk)
+    record.soft_delete()
+    messages.success(request, "Employee record deleted successfully.")
+    return redirect('admin_dashboard')

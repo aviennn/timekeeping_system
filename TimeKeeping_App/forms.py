@@ -12,7 +12,25 @@ class EmployeeCreationForm(forms.ModelForm):
         if commit:
             employee.save()
         return employee
+    
+class TimeRecordCreationForm(forms.ModelForm):
+    class Meta:
+        model = TimeRecord
+        fields = ['date', 'clock_in', 'clock_out', 'lunch_start', 'lunch_end']
+        widgets = {
+            'date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'clock_in': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+            'clock_out': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+            'lunch_start': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+            'lunch_end': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+        }
 
+    def save(self, commit=True):
+        timerecord = super().save(commit=False)
+        if commit:
+            timerecord.save()
+        return timerecord
+    
 class TimeRecordForm(forms.ModelForm):
     class Meta:
         model = TimeRecord
