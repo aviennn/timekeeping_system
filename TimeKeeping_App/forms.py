@@ -12,6 +12,11 @@ class EmployeeCreationForm(forms.ModelForm):
         if commit:
             employee.save()
         return employee
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs.update({'class': 'form-control'})
 
 class TimeRecordCreationForm(forms.ModelForm):
     class Meta:
