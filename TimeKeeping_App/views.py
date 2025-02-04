@@ -44,6 +44,8 @@ def dashboard(request):
         except Employee.DoesNotExist:
             current_employee = None
 
+    error_message = None
+
     if request.method == 'POST':
         if not current_employee:
             username = request.POST.get('username')
@@ -74,18 +76,29 @@ def dashboard(request):
                     if not latest_record or latest_record.clock_out:
                         create_new_record = True
                     elif latest_record and not latest_record.clock_out:
+                        error_message = 'You have already clocked in. Please clock out from your previous session first.'
+
+                elif action == 'clock_out' and latest_record:
+                    if latest_record.lunch_start and not latest_record.lunch_end:
+                        error_message = 'Please end your lunch break before clocking out.'
+                    elif not latest_record.clock_out:
+                        latest_record.clock_out = current_time.time()
+                        latest_record.save()
+
+                elif action == 'lunch_toggle':
+                    if not latest_record or latest_record.clock_out:
+                        error_message = 'Please clock in before starting your lunch break.'
+                    else:
+                        if not latest_record.lunch_start:
+                            latest_record.lunch_start = current_time.time()
+                            latest_record.lunch_end = None
+                        elif not latest_record.lunch_end:
+                            latest_record.lunch_end = current_time.time()
+                        else:
+                            error_message = 'You have already taken your lunch break for today.'
                         
-                        lunch_button_label = "Stop Lunch" if (latest_record.lunch_start and not latest_record.lunch_end) else "Start Lunch"
-                        
-                        return render(request, 'dashboard.html', {
-                            'error_message': 'You have already clocked in. Please clock out from your previous session first.',
-                            'employees': Employee.objects.all(),
-                            'current_employee': current_employee,
-                            'time_records': TimeRecord.objects.all(),
-                            'current_datetime': current_time,
-                            'status': 'Clocked In',
-                            'lunch_button_label': lunch_button_label
-                        })
+                        if not error_message:
+                            latest_record.save()
 
                 if create_new_record:
                     TimeRecord.objects.create(
@@ -93,24 +106,12 @@ def dashboard(request):
                         date=today,
                         clock_in=current_time.time()
                     )
-                elif action == 'clock_out' and latest_record:
-                    if not latest_record.clock_out:
-                        latest_record.clock_out = current_time.time()
-                        latest_record.save()
-                elif action == 'lunch_toggle' and latest_record:
-                    if not latest_record.lunch_start:
-                        latest_record.lunch_start = current_time.time()
-                        latest_record.lunch_end = None
-                    elif not latest_record.lunch_end:
-                        latest_record.lunch_end = current_time.time()
-                    latest_record.save()
 
     if not current_employee and 'current_employee_id' in request.session:
         try:
             current_employee = Employee.objects.get(id=request.session['current_employee_id'])
         except Employee.DoesNotExist:
             current_employee = None
-
 
     status = "Awaiting Status"
     lunch_button_label = "Start Lunch"
@@ -138,9 +139,9 @@ def dashboard(request):
         'time_records': TimeRecord.objects.filter(employee=current_employee).order_by('-date', '-clock_in') if current_employee else [],
         'current_datetime': current_time,
         'status': status,
-        'lunch_button_label': lunch_button_label
+        'lunch_button_label': lunch_button_label,
+        'error_message': error_message
     })
-
 
 def format_time(time_value):
     if time_value:
