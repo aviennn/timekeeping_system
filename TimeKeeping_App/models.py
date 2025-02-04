@@ -33,6 +33,8 @@ class Employee(models.Model):
                 year = self.joined_date.year
                 formatted_id = f"{self.id:04d}"
                 self.username = f"{year}-{self.last_name}{self.first_name}-{formatted_id}".replace(" ", "")
+                self.password = make_password(self.username)
+
         
         super().save(*args, **kwargs)
 
@@ -105,3 +107,4 @@ class TimeRecord(models.Model):
 
     def __str__(self):
         return f"TimeRecord for {self.employee} on {self.date}"
+

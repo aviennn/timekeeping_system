@@ -80,7 +80,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'timekeeping_system', 
         'USER': 'root',  
-        'PASSWORD': 'Christiandale11',  
+        'PASSWORD': 'put password here',  
         'HOST': 'localhost',  
         'PORT': '3306',  
     }
@@ -132,7 +132,7 @@ JAZZMIN_SETTINGS = {
     "site_header": "Academe TS",
     "site_brand": "Academe TS",
     "site_logo":"images/icon-1.png",
-    "login_logo":"images/icon-1.png",
+    "login_logo":"images/icon-2.png",
     "login_logo_dark":"images/icon-2.png",
     #"site_logo_classes": "",
     "site_icon":"images/favicon.png",
@@ -191,9 +191,9 @@ JAZZMIN_SETTINGS = {
 
     # UI TWEAKS
 
-    "custom_css": "style.css",
+    "custom_css": "css/jazzmin.css",
     #"custom_js": None,
-    #"use_google_fonts_cdn": True,
+    "use_google_fonts_cdn": True,
     "show_ui_builder": True,
 
     # CHANGE VIEW
@@ -239,4 +239,4 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'academetsmain@gmail.com'
-EMAIL_HOST_PASSWORD = 'ytbj gzks dzxk csrg' # MAKE SURE TO DELETE THIS BEFORE PUSHING TO GITHUB
+EMAIL_HOST_PASSWORD = 'put password here' # MAKE SURE TO DELETE THIS BEFORE PUSHING TO GITHUB

@@ -23,14 +23,13 @@ import pandas as pd
 from .forms import EmployeeCreationForm
 from .models import Employee
 from django.contrib import messages  
-from .forms import EmployeeUpdateForm
-
-#for password reset
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
 from django.utils import timezone
 from .forms import ChangePasswordForm, ResetPasswordEmailForm, ResetPasswordForm
 from .models import Employee
+from django.contrib.auth.hashers import check_password
+from .forms import TimeRecordForm
 
 def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
@@ -111,7 +110,7 @@ def dashboard(request):
             current_employee = None
 
 
-    status = "Pending"
+    status = "Awaiting Status"
     lunch_button_label = "Start Lunch"
     if current_employee:
         today = current_time.date()
@@ -202,8 +201,18 @@ def export_pdf(request, pk):
 
     try:
         current_employee = Employee.objects.get(id=pk)
-        records = TimeRecord.objects.filter(employee=current_employee)
         full_name = f"{current_employee.first_name} {current_employee.last_name}"
+
+        # Get date range from request
+        start_date = request.GET.get('datefrom')
+        end_date = request.GET.get('dateto')
+
+        # Filter records based on date range
+        if start_date and end_date:
+            records = TimeRecord.objects.filter(employee=current_employee, date__range=[start_date, end_date]).order_by('date')
+        else:
+            records = TimeRecord.objects.filter(employee=current_employee).order_by('date')  # Default: All records
+
 
         icon_path = os.path.join(settings.BASE_DIR, 'TimeKeeping_App', 'static', 'images', 'icon-3.jpg')
         icon_x = margin
@@ -241,6 +250,17 @@ def export_pdf(request, pk):
         employee_name_y_position = employee_name_label_y_position - 20
         p.drawString((page_width - employee_name_width) / 2, employee_name_y_position, full_name)
 
+        # Add date range display
+        if start_date and end_date:
+            date_range_text = f"Date Range: {start_date} to {end_date}"
+        else:
+            date_range_text = "All Records"
+        
+        p.setFont("Helvetica", 11)
+        date_range_width = p.stringWidth(date_range_text, "Helvetica", 11)
+        p.drawString((page_width - date_range_width) / 2, employee_name_y_position - 20, date_range_text)
+
+
         table_y_position = page_height - margin - top_margin_for_table
         
         data = [["Date", "Clock In", "Clock Out", "Total Hours"]]
@@ -254,11 +274,15 @@ def export_pdf(request, pk):
         
         available_height = table_y_position - (margin + 20)
         rows_per_page = int(available_height / 20)
+
+        # Calculate column width so they are equally spaced
+        num_columns = len(data[0])  # 5 columns
+        column_width = content_width / num_columns  # Evenly divide available width
         
         start_row = 1
         while start_row < len(data):
             table_chunk = [data[0]] + data[start_row:start_row + rows_per_page]
-            table = Table(table_chunk, colWidths=[content_width * 0.25] * 4)
+            table = Table(table_chunk, colWidths=[column_width] * num_columns)  
             table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -363,7 +387,14 @@ def logout_admin(request):
 
 def export_excel(request, pk):
     employee = get_object_or_404(Employee, pk=pk)
-    records = TimeRecord.objects.filter(employee=employee)
+    
+    start_date = request.GET.get('datefrom')
+    end_date = request.GET.get('dateto')
+
+    if start_date and end_date:
+        records = TimeRecord.objects.filter(employee=employee, date__range=[start_date, end_date]).order_by('date')
+    else:
+        records = TimeRecord.objects.filter(employee=employee).order_by('date')  # Default: All records sorted by date
 
     data = []
     for record in records:
@@ -413,8 +444,13 @@ def view_user_info(request, employee_id):
         form = EmployeeCreationForm(instance=employee)  
     return render(request, 'view_user_info.html', {'employee': employee, 'form': form})
 
+def delete_employee(request, employee_id):
+    employee = get_object_or_404(Employee, id=employee_id)
+    
+    employee.delete()
 
-from django.contrib import messages  
+    return redirect('admin_dashboard') 
+
 
 
 def change_password(request):
@@ -526,3 +562,38 @@ def reset_password(request):
         'form': form,
         'error_message': error_message
     })
+    
+
+def change_employee_password(request, employee_id):
+    employee = get_object_or_404(Employee, id=employee_id)
+
+    if request.method == 'POST':
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+
+        if new_password and new_password == confirm_password:
+            employee.password = make_password(new_password)
+            employee.save()
+
+            storage = messages.get_messages(request)
+            storage.used = True
+
+            messages.success(request, f"Password for {employee.first_name} {employee.last_name} has been updated successfully.")
+            return redirect('admin_dashboard')  
+        else:
+            messages.error(request, "Passwords do not match. Please try again.")
+
+    return render(request, 'change_employee_password.html', {'employee': employee})
+
+def edit_time_record(request, pk):
+    record = get_object_or_404(TimeRecord, pk=pk)
+    
+    if request.method == "POST":
+        form = TimeRecordForm(request.POST, instance=record)
+        if form.is_valid():
+            form.save()
+            return redirect('view_records', pk=record.employee.id) 
+    else:
+        form = TimeRecordForm(instance=record)
+
+    return render(request, 'edit_time_record.html', {'form': form, 'record': record})

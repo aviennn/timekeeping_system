@@ -1,5 +1,6 @@
 from django import forms
 from .models import Employee
+from .models import TimeRecord
 
 class EmployeeCreationForm(forms.ModelForm):
     class Meta:
@@ -12,19 +13,11 @@ class EmployeeCreationForm(forms.ModelForm):
             employee.save()
         return employee
 
-class EmployeeUpdateForm(forms.ModelForm):
+class TimeRecordForm(forms.ModelForm):
     class Meta:
-        model = Employee
-        fields = ['first_name', 'middle_name', 'last_name', 'email', 'joined_date']
+        model = TimeRecord
+        fields = ['date','clock_in', 'clock_out', 'lunch_start', 'lunch_end']
 
-    def save(self, commit=True):
-        employee = super().save(commit=False)
-        if commit:
-            employee.save()
-        return employee
-    
-
-#Forms for changing password on employee side
 
 class ChangePasswordForm(forms.Form):
     old_password = forms.CharField(widget=forms.PasswordInput())
