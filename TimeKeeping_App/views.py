@@ -81,7 +81,7 @@ def dashboard(request):
                             'error_message': 'You have already clocked in. Please clock out from your previous session first.',
                             'employees': Employee.objects.all(),
                             'current_employee': current_employee,
-                            'time_records': TimeRecord.objects.filter(employee=current_employee),
+                            'time_records': TimeRecord.objects.all(),
                             'current_datetime': current_time,
                             'status': 'Clocked In',
                             'lunch_button_label': lunch_button_label
@@ -627,12 +627,12 @@ def edit_time_record(request, pk):
     record = get_object_or_404(TimeRecord, pk=pk)
     
     if request.method == "POST":
-        form = TimeRecordForm(request.POST, instance=record)
+        form = TimeRecordCreationForm(request.POST, instance=record)
         if form.is_valid():
             form.save()
             return redirect('view_records', pk=record.employee.id) 
     else:
-        form = TimeRecordForm(instance=record)
+        form = TimeRecordCreationForm(instance=record)
 
     return render(request, 'edit_time_record.html', {'form': form, 'record': record})
 
