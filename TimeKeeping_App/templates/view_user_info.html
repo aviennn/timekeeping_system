@@ -12,6 +12,20 @@
     <p><strong>Email:</strong> {{ employee.email }}</p>
     <p><strong>Date Joined:</strong> {{ employee.joined_date }}</p>
     
+
+    {% if messages %}
+    <div class="alert-container">
+        {% for message in messages %}
+            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
     <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#editEmployeeModal">
         Edit
     </button>
