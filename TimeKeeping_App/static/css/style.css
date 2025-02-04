@@ -121,7 +121,7 @@ select, .password-container input[type="password"], .password-container input[ty
 .navbar .dropdown-menu {
     right: 0;
     left: auto;
-    max-width: 200px;
+    max-width: 225px;
     white-space: nowrap;
 }
 
@@ -163,7 +163,7 @@ html, body {
     text-decoration: none;
 }
 
-.category-header, .category-header-2, .category-header-3, .category-header-4 {
+.category-header, .category-header-2, .category-header-3, .category-header-4, .category-header-5 {
     border-radius: 24px;
     padding: 20px;
     display: flex;
@@ -181,7 +181,7 @@ html, body {
     background: linear-gradient(to right, #89c2d9, #a3d9a5);
 }
 
-.category-header-2 {
+.category-header-2, .category-header-5 {
     background: linear-gradient(to right, #5f9eff, #a8cfff);
 }
 
@@ -205,11 +205,11 @@ html, body {
     margin-bottom: 0;
 }
 
-.category-header h1, .category-header-2 h1, .category-header-3 h1, .category-header-4 h1 {
+.category-header h1, .category-header-2 h1, .category-header-3 h1, .category-header-4 h1, .category-header-5 h1 {
     margin: 5px 0 0;
 }
 
-.category-header img, .category-header-2 img, .category-header-3 img, .category-header-4 img {
+.category-header img, .category-header-2 img, .category-header-3 img, .category-header-4 img, .category-header-5 img {
     height: 150px;
     width: auto;
     padding-right: 20px;
@@ -363,7 +363,7 @@ html, body {
         height: 35px;
     }
 
-    .category-header, .category-header-2, .category-header-3, .category-header-4 {
+    .category-header, .category-header-2, .category-header-3, .category-header-4, .category-header-5 {
         flex-direction: column;
         text-align: center;
         max-width: 100%;
@@ -378,11 +378,11 @@ html, body {
         font-size: 1rem;
     }
 
-    .category-header h1, .category-header-2 h1, .category-header-3 h1, .category-header-4 h1 {
+    .category-header h1, .category-header-2 h1, .category-header-3 h1, .category-header-4 h1, .category-header-5 h1 {
         font-size: 1.8rem;
     }
 
-    .category-header img, .category-header-2 img, .category-header-3 img, .category-header-4 img {
+    .category-header img, .category-header-2 img, .category-header-3 img, .category-header-4 img, .category-header-5 img {
         height: 80px;
         padding-right: 0;
         margin-top: 10px;

@@ -41,7 +41,11 @@ class TimeRecordForm(forms.ModelForm):
     class Meta:
         model = TimeRecord
         fields = ['date','clock_in', 'clock_out', 'lunch_start', 'lunch_end']
-
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs.update({'class': 'form-control'})
 
 class ChangePasswordForm(forms.Form):
     old_password = forms.CharField(widget=forms.PasswordInput())

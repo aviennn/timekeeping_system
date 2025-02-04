@@ -1,14 +1,111 @@
 {% extends 'base.html' %}
 
-{% block title %}Edit Time Record{% endblock %}
+{% block title %}
+    {% if is_authenticated %}
+    {{ record.employee }} | Edit Time Record
+    {% else %}
+    Log In |  Academe TS
+    {% endif %}
+{% endblock %}
+
+{% block nav %}
+    <nav class="navbar navbar-dark navbar-expand-lg navbar-custom">
+        <div class="container-fluid">
+            <div class="nav-logo navbar-brand">
+                <img src="/static/images/icon-1.png" width="42" height="30" class="align-top">
+                <span class="h3">Academe TS</span>
+            </div>
+
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNavDropdown">
+                <ul class="navbar-nav ms-auto ml-auto">
+                    {% if is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            {{ user.username }}
+                        </a>
+                    
+                        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
+                            <a class="dropdown-item" href="{% url 'logout_admin' %}"><span class="text-secondary"><i class="fas fa-sign-out-alt"></i> | Log Out</span></a>
+                        </div>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin_dashboard' %}"> <i class="fas fa-sign-in-alt"></i> | Log In</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+{% endblock %}
 
 {% block content %}
-    <h2>Edit Time Record for {{ record.employee }}</h2>
+    <div class="category-header-5 shadow">
+        <div class="text-section">
+            <p class="welcome-text">
+                {{ record.employee }}
+            </p>
+
+            <h1>
+                <b>Edit Time Record</b>
+            </h1>
+        </div>
+        <img src="/static/images/3d-12.png">
+    </div>
     
-    <form method="POST">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-outline-success">Save Changes</button>
-        <a href="{% url 'view_records' pk=record.employee.id %}" class="btn btn-outline-danger">Cancel</a>
-    </form>
+    <div class="d-flex justify-content-center">
+        <div class="col-xl-7">
+            <div class="user-info">
+                <div class="card-body m-3">
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.date.id_for_label }}" class="form-label font-weight-bold text-secondary">Date</label>
+                            {{ form.date }}
+                        </div>
+                    
+                        <div class="row">
+                            <div class="col mb-3">
+                                <label for="{{ form.clock_in.id_for_label }}" class="form-label font-weight-bold text-secondary">Clock In</label>
+                                {{ form.clock_in }}
+                            </div>
+                        
+                            <div class="col mb-3">
+                                <label for="{{ form.clock_out.id_for_label }}" class="form-label font-weight-bold text-secondary">Clock Out</label>
+                                {{ form.clock_out }}
+                            </div>
+                        </div>
+                    
+                        <div class="row">
+                            <div class="col mb-3">
+                                <label for="{{ form.lunch_start.id_for_label }}" class="form-label font-weight-bold text-secondary">Lunch Start</label>
+                                {{ form.lunch_start }}
+                            </div>
+                        
+                            <div class="col mb-3">
+                                <label for="{{ form.lunch_end.id_for_label }}" class="form-label font-weight-bold text-secondary">Lunch End</label>
+                                {{ form.lunch_end }}
+                            </div>
+                        </div><hr>
+
+                        <div class="mb-3 d-flex justify-content-center">
+                            <button type="submit" class="btn btn-primary mt-3">
+                                <i class="fas fa-save"></i> Save Changes</button>
+                        </div>
+
+                        <div class="d-flex justify-content-center">
+                            <a href="{% url 'view_records' pk=record.employee.id %}" class="btn btn-secondary">
+                                <i class="fas fa-caret-left"></i> Back
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}

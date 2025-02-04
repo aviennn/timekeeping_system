@@ -2,7 +2,7 @@
 
 {% block title %}
     {% if is_authenticated %}
-    {{ user.username }} |  Academe TS
+    {{ employee.username }} | View Time Record
     {% else %}
     Log In |  Academe TS
     {% endif %}
@@ -164,13 +164,13 @@
                             <td>{{ record.lunch_break_duration }}</td>
                             <td>{{ record.total_hours }}</td>
                             <td class="text-center">
-                                <a href="{% url 'edit_time_record' pk=record.id %}" class="btn btn-lg btn-primary px-2 py-1 my-1 d-inline-block" title="Edit Time Record">
+                                <a href="{% url 'edit_time_record' pk=record.id %}" class="btn btn-lg btn-primary px-2 py-1 my-1 d-inline-block" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 
                                 <form action="{% url 'delete_time_record' pk=record.id %}" method="POST" style="display:inline;">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn btn-lg btn-danger px-2 py-1 my-1 d-inline-block" title="Delete Time Record" onclick="return confirm('Are you sure you want to delete this record?');">
+                                    <button type="submit" class="btn btn-lg btn-danger px-2 py-1 my-1 d-inline-block" title="Delete" onclick="return confirm('Are you sure you want to delete this record?');">
                                         <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </form>
