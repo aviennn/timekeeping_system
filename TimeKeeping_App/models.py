@@ -38,6 +38,8 @@ class Employee(SoftDelete, models.Model):
     password = models.CharField(max_length=100)
     reset_code = models.CharField(max_length=6, null=True, blank=True)
     reset_code_expiry = models.DateTimeField(null=True, blank=True)
+    is_deleted = models.BooleanField(default=False)
+
     
     objects = EmployeeManager()
 
@@ -93,6 +95,8 @@ class TimeRecord(SoftDelete, models.Model):
     clock_out = models.TimeField(null=True, blank=True)
     lunch_start = models.TimeField(null=True, blank=True)
     lunch_end = models.TimeField(null=True, blank=True)
+    is_deleted = models.BooleanField(default=False)
+
     
     objects = TimeRecordManager()
 
