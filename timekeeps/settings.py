@@ -80,7 +80,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'timekeeping_system', 
         'USER': 'root',  
-        'PASSWORD': 'put password here',  
+        'PASSWORD': 'W0tdafrehk!,',  
         'HOST': 'localhost',  
         'PORT': '3306',  
     }
@@ -239,4 +239,4 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'academetsmain@gmail.com'
-EMAIL_HOST_PASSWORD = 'put password here' # MAKE SURE TO DELETE THIS BEFORE PUSHING TO GITHUB
+EMAIL_HOST_PASSWORD = 'ytbj gzks dzxk csrg'
