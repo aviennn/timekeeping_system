@@ -54,10 +54,10 @@
             <img src="/static/images/3d-3.png">
         </div>
         {% if messages %}
-        <div class="alert-container">
+        <div class="alert-danger error-message text-center">
             {% for message in messages %}
                 <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
-                    {{ message }}
+                    <i class="fas fas fa-times-circle"></i> {{ message }}
                     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -65,7 +65,6 @@
             {% endfor %}
         </div>
     {% endif %}
-
 
         <div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-labelledby="addEmployeeModalLabel" aria-hidden="true">
             <div class="modal-dialog">
