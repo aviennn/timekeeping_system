@@ -189,21 +189,24 @@ def calculate_lunch_duration(record):
         return f"{minutes} minute{'s' if minutes != 1 else ''}"
     return "N/A"
 
+def format_readable_date(date_str):
+    return datetime.strptime(date_str, "%Y-%m-%d").strftime("%B %d, %Y")
+
 def export_pdf(request, pk):
+    current_employee = Employee.objects.get(id=pk)
     response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="timerecords.pdf"'
+    response['Content-Disposition'] = f'attachment; filename="employee_{current_employee.username}_time_records.pdf"'
 
     page_width, page_height = letter
     margin = 36
     content_width = page_width - (2 * margin)
-    top_margin_for_table = 36
+    top_margin_for_table = 63
     bottom_margin = margin + 50  # Space reserved for signatures
     max_table_height = page_height - 180 - bottom_margin  # Adjusted for header and footer
 
     p = canvas.Canvas(response, pagesize=letter)
 
     try:
-        current_employee = Employee.objects.get(id=pk)
         full_name = f"{current_employee.first_name} {current_employee.last_name}"
 
         # Get date range from request
@@ -253,16 +256,6 @@ def export_pdf(request, pk):
         employee_name_y_position = employee_name_label_y_position - 20
         p.drawString((page_width - employee_name_width) / 2, employee_name_y_position, full_name)
 
-        # Add date range display
-        if start_date and end_date:
-            date_range_text = f"Date Range: {start_date} to {end_date}"
-        else:
-            date_range_text = "All Records"
-        
-        p.setFont("Helvetica", 11)
-        date_range_width = p.stringWidth(date_range_text, "Helvetica", 11)
-        p.drawString((page_width - date_range_width) / 2, employee_name_y_position - 20, date_range_text)
-
 
         table_y_position = page_height - margin - top_margin_for_table
         
@@ -305,7 +298,47 @@ def export_pdf(request, pk):
             start_row += rows_per_page
             if start_row < len(data):
                 p.showPage()
+                icon_path = os.path.join(settings.BASE_DIR, 'TimeKeeping_App', 'static', 'images', 'icon-3.jpg')
+                icon_x = margin
+                icon_y = page_height - margin - 14
+
+                p.setFont("Helvetica-Bold", 24)
+                title_text = "Academe TS"
+                title_width = p.stringWidth(title_text, "Helvetica-Bold", 24)
+                title_x = (page_width - title_width) / 2
+
+                spacing = 5
+                image_width = 42
+                title_width = p.stringWidth(title_text, "Helvetica-Bold", 31)
+                total_width = image_width + spacing + title_width
+                start_x = (page_width - total_width) / 2
+                text_y = page_height - margin - 6
+
+                p.drawImage(icon_path, start_x, icon_y, width=image_width, height=30)
+                p.drawString(start_x + image_width + spacing, text_y, title_text)
+
+                p.setFont("Helvetica", 12)
+                subtitle_text = "GOCLOUD Asia, Inc."
+                subtitle_width = p.stringWidth(subtitle_text, "Helvetica", 12)
+                subtitle_y_position = page_height - margin - 25
+                p.drawString((page_width - subtitle_width) / 2, subtitle_y_position, subtitle_text)
                 table_y_position = page_height - margin - top_margin_for_table
+
+        # Calculate Y position for the Date Range below the table
+        table_bottom_y = table_y_position - (len(table_chunk) * 20)
+        date_range_y_position = table_bottom_y - 30  # Adjust spacing
+        
+        # Add date range display
+        if start_date and end_date:
+            r_start = format_readable_date(start_date)
+            r_end = format_readable_date(end_date)
+            date_range_text = f"Date Range: {r_start} to {r_end}"
+        else:
+            date_range_text = "All Records"
+        
+        p.setFont("Helvetica", 11)
+        date_range_width = p.stringWidth(date_range_text, "Helvetica", 11)
+        p.drawString((page_width - date_range_width) / 2, date_range_y_position, date_range_text)
         
         signature_y = margin + 70
         center_x = page_width / 2
