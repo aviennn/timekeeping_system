@@ -66,58 +66,6 @@
         </div>
     {% endif %}
 
-        <div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-labelledby="addEmployeeModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="add-employee-modal modal-header">
-                        <h5 class="modal-title font-weight-bold text-white" id="addEmployeeModalLabel"><i class="fas fa-user-plus"></i> Add Employee</h5>
-                        
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span class="text-white" aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-
-                    <div class="modal-body m-2 px-5">
-                        <div class="d-flex justify-content-center mb-4">
-                            <img src="/static/images/3d-10.png" height="250">
-                        </div>
-
-                        <form method="post" action="{% url 'create_employee' %}">
-                            {% csrf_token %}
-                            <div class="form-group">
-                                <label class="font-weight-bold text-secondary" for="first_name">First Name</label>
-                                <input type="text" class="form-control" name="first_name" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="font-weight-bold text-secondary" for="middle_name">Middle Name</label>
-                                <input type="text" class="form-control" name="middle_name">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="font-weight-bold text-secondary" for="last_name">Last Name</label>
-                                <input type="text" class="form-control" name="last_name" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="font-weight-bold text-secondary" for="email">Email</label>
-                                <input type="email" class="form-control" name="email" required>
-                            </div>
-                            
-                            <div class="form-group mb-4">
-                                <label class="font-weight-bold text-secondary" for="joined_date">Join Date</label>
-                                <input type="date" class="form-control" name="joined_date" required>
-                            </div>
-                            <hr class="mt-4">
-
-                            <div class="mx-3 d-flex justify-content-center">
-                                <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Create Employee</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-labelledby="addEmployeeModalLabel" aria-hidden="true">
             <div class="modal-dialog">

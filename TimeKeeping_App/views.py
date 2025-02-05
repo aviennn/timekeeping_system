@@ -13,7 +13,7 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.http import HttpResponseForbidden
 from reportlab.lib import colors
-from reportlab.platypus import Table, TableStyle
+from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, Paragraph
 from django.http import HttpResponse
 from datetime import datetime
 from django.templatetags.static import static
@@ -29,9 +29,10 @@ from django.utils import timezone
 from .forms import ChangePasswordForm, ResetPasswordEmailForm, ResetPasswordForm
 from .models import Employee
 from django.contrib.auth.hashers import check_password
-from .forms import TimeRecordForm
+from .forms import TimeRecordEditForm
 from .forms import TimeRecordCreationForm
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
 
 def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
@@ -43,6 +44,8 @@ def dashboard(request):
             current_employee = Employee.objects.get(id=request.session['current_employee_id'])
         except Employee.DoesNotExist:
             current_employee = None
+
+    error_message = None
 
     if request.method == 'POST':
         if not current_employee:
@@ -74,18 +77,29 @@ def dashboard(request):
                     if not latest_record or latest_record.clock_out:
                         create_new_record = True
                     elif latest_record and not latest_record.clock_out:
+                        error_message = 'You have already clocked in. Please clock out from your previous session first.'
+
+                elif action == 'clock_out' and latest_record:
+                    if latest_record.lunch_start and not latest_record.lunch_end:
+                        error_message = 'Please end your lunch break before clocking out.'
+                    elif not latest_record.clock_out:
+                        latest_record.clock_out = current_time.time()
+                        latest_record.save()
+
+                elif action == 'lunch_toggle':
+                    if not latest_record or latest_record.clock_out:
+                        error_message = 'Please clock in before starting your lunch break.'
+                    else:
+                        if not latest_record.lunch_start:
+                            latest_record.lunch_start = current_time.time()
+                            latest_record.lunch_end = None
+                        elif not latest_record.lunch_end:
+                            latest_record.lunch_end = current_time.time()
+                        else:
+                            error_message = 'You have already taken your lunch break for today.'
                         
-                        lunch_button_label = "Stop Lunch" if (latest_record.lunch_start and not latest_record.lunch_end) else "Start Lunch"
-                        
-                        return render(request, 'dashboard.html', {
-                            'error_message': 'You have already clocked in. Please clock out from your previous session first.',
-                            'employees': Employee.objects.all(),
-                            'current_employee': current_employee,
-                            'time_records': TimeRecord.objects.all(),
-                            'current_datetime': current_time,
-                            'status': 'Clocked In',
-                            'lunch_button_label': lunch_button_label
-                        })
+                        if not error_message:
+                            latest_record.save()
 
                 if create_new_record:
                     TimeRecord.objects.create(
@@ -93,24 +107,12 @@ def dashboard(request):
                         date=today,
                         clock_in=current_time.time()
                     )
-                elif action == 'clock_out' and latest_record:
-                    if not latest_record.clock_out:
-                        latest_record.clock_out = current_time.time()
-                        latest_record.save()
-                elif action == 'lunch_toggle' and latest_record:
-                    if not latest_record.lunch_start:
-                        latest_record.lunch_start = current_time.time()
-                        latest_record.lunch_end = None
-                    elif not latest_record.lunch_end:
-                        latest_record.lunch_end = current_time.time()
-                    latest_record.save()
 
     if not current_employee and 'current_employee_id' in request.session:
         try:
             current_employee = Employee.objects.get(id=request.session['current_employee_id'])
         except Employee.DoesNotExist:
             current_employee = None
-
 
     status = "Awaiting Status"
     lunch_button_label = "Start Lunch"
@@ -135,12 +137,12 @@ def dashboard(request):
     return render(request, 'dashboard.html', {
         'employees': Employee.objects.all(),
         'current_employee': current_employee,
-        'time_records': TimeRecord.objects.filter(employee=current_employee).order_by('-date', '-clock_in') if current_employee else [],
+        'time_records' : TimeRecord.objects.filter(employee=current_employee, date=today).order_by('-clock_in') if current_employee else [],   
         'current_datetime': current_time,
         'status': status,
-        'lunch_button_label': lunch_button_label
+        'lunch_button_label': lunch_button_label,
+        'error_message': error_message
     })
-
 
 def format_time(time_value):
     if time_value:
@@ -188,19 +190,24 @@ def calculate_lunch_duration(record):
         return f"{minutes} minute{'s' if minutes != 1 else ''}"
     return "N/A"
 
+def format_readable_date(date_str):
+    return datetime.strptime(date_str, "%Y-%m-%d").strftime("%B %d, %Y")
+
 def export_pdf(request, pk):
+    current_employee = Employee.objects.get(id=pk)
     response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="timerecords.pdf"'
+    response['Content-Disposition'] = f'attachment; filename="employee_{current_employee.username}_time_records.pdf"'
 
     page_width, page_height = letter
     margin = 36
     content_width = page_width - (2 * margin)
-    top_margin_for_table = 80
+    top_margin_for_table = 63
+    bottom_margin = margin + 50  # Space reserved for signatures
+    max_table_height = page_height - 180 - bottom_margin  # Adjusted for header and footer
 
     p = canvas.Canvas(response, pagesize=letter)
 
     try:
-        current_employee = Employee.objects.get(id=pk)
         full_name = f"{current_employee.first_name} {current_employee.last_name}"
 
         # Get date range from request
@@ -250,16 +257,6 @@ def export_pdf(request, pk):
         employee_name_y_position = employee_name_label_y_position - 20
         p.drawString((page_width - employee_name_width) / 2, employee_name_y_position, full_name)
 
-        # Add date range display
-        if start_date and end_date:
-            date_range_text = f"Date Range: {start_date} to {end_date}"
-        else:
-            date_range_text = "All Records"
-        
-        p.setFont("Helvetica", 11)
-        date_range_width = p.stringWidth(date_range_text, "Helvetica", 11)
-        p.drawString((page_width - date_range_width) / 2, employee_name_y_position - 20, date_range_text)
-
 
         table_y_position = page_height - margin - top_margin_for_table
         
@@ -291,7 +288,6 @@ def export_pdf(request, pk):
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
                 ('TOPPADDING', (0, 0), (-1, -1), 4),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
                 ('LEFTPADDING', (0, 0), (-1, -1), 2),
                 ('RIGHTPADDING', (0, 0), (-1, -1), 2),
                 ('BACKGROUND', (0, 1), (-1, -1), colors.white),
@@ -303,7 +299,47 @@ def export_pdf(request, pk):
             start_row += rows_per_page
             if start_row < len(data):
                 p.showPage()
+                icon_path = os.path.join(settings.BASE_DIR, 'TimeKeeping_App', 'static', 'images', 'icon-3.jpg')
+                icon_x = margin
+                icon_y = page_height - margin - 14
+
+                p.setFont("Helvetica-Bold", 24)
+                title_text = "Academe TS"
+                title_width = p.stringWidth(title_text, "Helvetica-Bold", 24)
+                title_x = (page_width - title_width) / 2
+
+                spacing = 5
+                image_width = 42
+                title_width = p.stringWidth(title_text, "Helvetica-Bold", 31)
+                total_width = image_width + spacing + title_width
+                start_x = (page_width - total_width) / 2
+                text_y = page_height - margin - 6
+
+                p.drawImage(icon_path, start_x, icon_y, width=image_width, height=30)
+                p.drawString(start_x + image_width + spacing, text_y, title_text)
+
+                p.setFont("Helvetica", 12)
+                subtitle_text = "GOCLOUD Asia, Inc."
+                subtitle_width = p.stringWidth(subtitle_text, "Helvetica", 12)
+                subtitle_y_position = page_height - margin - 25
+                p.drawString((page_width - subtitle_width) / 2, subtitle_y_position, subtitle_text)
                 table_y_position = page_height - margin - top_margin_for_table
+
+        # Calculate Y position for the Date Range below the table
+        table_bottom_y = table_y_position - (len(table_chunk) * 20)
+        date_range_y_position = table_bottom_y - 30  # Adjust spacing
+        
+        # Add date range display
+        if start_date and end_date:
+            r_start = format_readable_date(start_date)
+            r_end = format_readable_date(end_date)
+            date_range_text = f"Date Range: {r_start} to {r_end}"
+        else:
+            date_range_text = "All Records"
+        
+        p.setFont("Helvetica", 11)
+        date_range_width = p.stringWidth(date_range_text, "Helvetica", 11)
+        p.drawString((page_width - date_range_width) / 2, date_range_y_position, date_range_text)
         
         signature_y = margin + 70
         center_x = page_width / 2
@@ -383,9 +419,9 @@ class EmployeeRecord(UserPassesTestMixin, View):
             "time_records": time_records
         })
 
-    
+
 def logout_admin(request):
-    request.session.flush()  
+    logout(request)  
     return redirect('admin_dashboard')
 
 def export_excel(request, pk):
@@ -424,15 +460,26 @@ def create_employee(request):
     if request.method == "POST":
         form = EmployeeCreationForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, "Employee created successfully!")
-            return redirect("admin_dashboard")
-        else:
-            messages.error(request, "Failed to create employee. Please fix the errors in the form.")
+            email = form.cleaned_data.get('email')
+            # Check for existing non-deleted email before saving
+            if Employee.objects.filter(email=email, is_deleted=False).exists():
+                form.add_error('email', 'This email is already registered to an active account.')
+            else:
+                try:
+                    # Set is_deleted=False explicitly when creating
+                    employee = form.save(commit=False)
+                    employee.is_deleted = False
+                    employee.save()
+                    messages.success(request, "Employee created successfully!")
+                    return redirect("admin_dashboard")
+                except Exception as e:
+                    form.add_error('email', 'This email is already registered to an inactive account.')
+
+        messages.error(request, "Failed to create employee. Please fix the errors in the form.")
     else:
         form = EmployeeCreationForm()
 
-    employees = Employee.objects.all()
+    employees = Employee.objects.filter(is_deleted=False)
     return render(request, "admin_dashboard.html", {
         "form": form,
         "employees": employees,
@@ -627,12 +674,12 @@ def edit_time_record(request, pk):
     record = get_object_or_404(TimeRecord, pk=pk)
     
     if request.method == "POST":
-        form = TimeRecordCreationForm(request.POST, instance=record)
+        form = TimeRecordEditForm(request.POST, instance=record)
         if form.is_valid():
             form.save()
             return redirect('view_records', pk=record.employee.id) 
     else:
-        form = TimeRecordCreationForm(instance=record)
+        form = TimeRecordEditForm(instance=record)
 
     return render(request, 'edit_time_record.html', {'form': form, 'record': record})
 
