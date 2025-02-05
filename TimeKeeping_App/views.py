@@ -32,6 +32,7 @@ from django.contrib.auth.hashers import check_password
 from .forms import TimeRecordForm
 from .forms import TimeRecordCreationForm
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
 
 def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
@@ -384,9 +385,9 @@ class EmployeeRecord(UserPassesTestMixin, View):
             "time_records": time_records
         })
 
-    
+
 def logout_admin(request):
-    request.session.flush()  
+    logout(request)  
     return redirect('admin_dashboard')
 
 def export_excel(request, pk):
