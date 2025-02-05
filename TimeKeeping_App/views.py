@@ -460,15 +460,26 @@ def create_employee(request):
     if request.method == "POST":
         form = EmployeeCreationForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, "Employee created successfully!")
-            return redirect("admin_dashboard")
-        else:
-            messages.error(request, "Failed to create employee. Please fix the errors in the form.")
+            email = form.cleaned_data.get('email')
+            # Check for existing non-deleted email before saving
+            if Employee.objects.filter(email=email, is_deleted=False).exists():
+                form.add_error('email', 'This email is already registered to an active account.')
+            else:
+                try:
+                    # Set is_deleted=False explicitly when creating
+                    employee = form.save(commit=False)
+                    employee.is_deleted = False
+                    employee.save()
+                    messages.success(request, "Employee created successfully!")
+                    return redirect("admin_dashboard")
+                except Exception as e:
+                    form.add_error('email', 'This email is already registered to an inactive account.')
+
+        messages.error(request, "Failed to create employee. Please fix the errors in the form.")
     else:
         form = EmployeeCreationForm()
 
-    employees = Employee.objects.all()
+    employees = Employee.objects.filter(is_deleted=False)
     return render(request, "admin_dashboard.html", {
         "form": form,
         "employees": employees,
