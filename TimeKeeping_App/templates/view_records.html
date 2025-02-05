@@ -161,7 +161,7 @@
                         <tr class="ts-tr">
                             <td>{{ record.date }}</td>
                             <td>{{ record.clock_in|time:"g:i A" }}</td>
-                            <td>{{ record.clock_out|time:"g:i A" }}</td>
+                            <td>{{ record.clock_out|time:"g:i A"|default:"None" }}</td>
                             <td>{{ record.lunch_break_duration }}</td>
                             <td>{{ record.total_hours }}</td>
                             <td>{{ record.overtime_hours|default:"None" }}</td>

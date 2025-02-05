@@ -260,13 +260,14 @@ def export_pdf(request, pk):
 
         table_y_position = page_height - margin - top_margin_for_table
         
-        data = [["Date", "Clock In", "Clock Out", "Total Hours"]]
+        data = [["Date", "Clock In", "Clock Out", "Total Hours", "Overtime Hours"]]
         for record in records:
             data.append([
                 format_date(record.date),
                 format_time(record.clock_in),
                 format_time(record.clock_out),
-                calculate_duration(record)
+                calculate_duration(record),
+                record.overtime_hours,
             ])
         
         available_height = table_y_position - (margin + 20)
