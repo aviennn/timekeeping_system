@@ -190,6 +190,14 @@ def calculate_lunch_duration(record):
         return f"{minutes} minute{'s' if minutes != 1 else ''}"
     return "N/A"
 
+def overtime_duration(record):
+    if record.overtime_hours:
+        ht_duration = datetime.combine(record.date, record.overtime_hours)
+        if ht_duration > 0:
+            return ht_duration
+    else: 
+        return "N/A"
+
 def format_readable_date(date_str):
     return datetime.strptime(date_str, "%Y-%m-%d").strftime("%B %d, %Y")
 
@@ -201,25 +209,21 @@ def export_pdf(request, pk):
     page_width, page_height = letter
     margin = 36
     content_width = page_width - (2 * margin)
-    top_margin_for_table = 63
-    bottom_margin = margin + 50  # Space reserved for signatures
-    max_table_height = page_height - 180 - bottom_margin  # Adjusted for header and footer
+    top_margin_for_table = 120  # Increased to ensure consistency
+    bottom_margin = margin + 80  # Reserved for signatures & date range
+    available_height = page_height - top_margin_for_table - bottom_margin
 
     p = canvas.Canvas(response, pagesize=letter)
-
     try:
+        current_employee = Employee.objects.get(id=pk)
         full_name = f"{current_employee.first_name} {current_employee.last_name}"
-
-        # Get date range from request
         start_date = request.GET.get('datefrom')
         end_date = request.GET.get('dateto')
 
-        # Filter records based on date range
         if start_date and end_date:
             records = TimeRecord.objects.filter(employee=current_employee, date__range=[start_date, end_date]).order_by('date')
         else:
-            records = TimeRecord.objects.filter(employee=current_employee).order_by('date')  # Default: All records
-
+            records = TimeRecord.objects.filter(employee=current_employee).order_by('date')
 
         icon_path = os.path.join(settings.BASE_DIR, 'TimeKeeping_App', 'static', 'images', 'icon-3.jpg')
         icon_x = margin
@@ -258,29 +262,26 @@ def export_pdf(request, pk):
         p.drawString((page_width - employee_name_width) / 2, employee_name_y_position, full_name)
 
 
-        table_y_position = page_height - margin - top_margin_for_table
-        
-        data = [["Date", "Clock In", "Clock Out", "Total Hours", "Overtime Hours"]]
+        table_y_position = page_height - top_margin_for_table
+        data = [["Date", "Clock In", "Clock Out", "Total Hours", "Overtime"]]
         for record in records:
+            overtimeduration = record.overtime_hours if record.overtime_hours else "N/A"
             data.append([
                 format_date(record.date),
                 format_time(record.clock_in),
                 format_time(record.clock_out),
                 calculate_duration(record),
-                record.overtime_hours,
+                overtimeduration
             ])
         
-        available_height = table_y_position - (margin + 20)
         rows_per_page = int(available_height / 20)
-
-        # Calculate column width so they are equally spaced
-        num_columns = len(data[0])  # 5 columns
-        column_width = content_width / num_columns  # Evenly divide available width
+        num_columns = len(data[0])
+        column_width = content_width / num_columns
         
         start_row = 1
         while start_row < len(data):
             table_chunk = [data[0]] + data[start_row:start_row + rows_per_page]
-            table = Table(table_chunk, colWidths=[column_width] * num_columns)  
+            table = Table(table_chunk, colWidths=[column_width] * num_columns)
             table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -289,9 +290,6 @@ def export_pdf(request, pk):
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
                 ('TOPPADDING', (0, 0), (-1, -1), 4),
-                ('LEFTPADDING', (0, 0), (-1, -1), 2),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 2),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
             ]))
             
             table.wrapOn(p, content_width, available_height)
@@ -300,41 +298,11 @@ def export_pdf(request, pk):
             start_row += rows_per_page
             if start_row < len(data):
                 p.showPage()
-                icon_path = os.path.join(settings.BASE_DIR, 'TimeKeeping_App', 'static', 'images', 'icon-3.jpg')
-                icon_x = margin
-                icon_y = page_height - margin - 14
-
-                p.setFont("Helvetica-Bold", 24)
-                title_text = "Academe TS"
-                title_width = p.stringWidth(title_text, "Helvetica-Bold", 24)
-                title_x = (page_width - title_width) / 2
-
-                spacing = 5
-                image_width = 42
-                title_width = p.stringWidth(title_text, "Helvetica-Bold", 31)
-                total_width = image_width + spacing + title_width
-                start_x = (page_width - total_width) / 2
-                text_y = page_height - margin - 6
-
-                p.drawImage(icon_path, start_x, icon_y, width=image_width, height=30)
-                p.drawString(start_x + image_width + spacing, text_y, title_text)
-
-                p.setFont("Helvetica", 12)
-                subtitle_text = "GOCLOUD Asia, Inc."
-                subtitle_width = p.stringWidth(subtitle_text, "Helvetica", 12)
-                subtitle_y_position = page_height - margin - 25
-                p.drawString((page_width - subtitle_width) / 2, subtitle_y_position, subtitle_text)
-                table_y_position = page_height - margin - top_margin_for_table
-
-        # Calculate Y position for the Date Range below the table
-        table_bottom_y = table_y_position - (len(table_chunk) * 20)
-        date_range_y_position = table_bottom_y - 30  # Adjust spacing
+                table_y_position = page_height - top_margin_for_table  # Reset Y position
         
-        # Add date range display
+        date_range_y_position = margin + 50
         if start_date and end_date:
-            r_start = format_readable_date(start_date)
-            r_end = format_readable_date(end_date)
-            date_range_text = f"Date Range: {r_start} to {r_end}"
+            date_range_text = f"Date Range: {format_readable_date(start_date)} to {format_readable_date(end_date)}"
         else:
             date_range_text = "All Records"
         
@@ -342,7 +310,7 @@ def export_pdf(request, pk):
         date_range_width = p.stringWidth(date_range_text, "Helvetica", 11)
         p.drawString((page_width - date_range_width) / 2, date_range_y_position, date_range_text)
         
-        signature_y = margin + 70
+        signature_y = margin + 20
         center_x = page_width / 2
         line_width = 200
         employee_signature_x = center_x - (line_width + 40)
@@ -350,15 +318,9 @@ def export_pdf(request, pk):
 
         p.line(employee_signature_x, signature_y, employee_signature_x + line_width, signature_y)
         p.line(supervisor_signature_x, signature_y, supervisor_signature_x + line_width, signature_y)
-
-        employee_text_width = p.stringWidth("Signature of Employee", "Helvetica", 10)
-        supervisor_text_width = p.stringWidth("Signature of Supervisor", "Helvetica", 10)
-
-        employee_text_x = employee_signature_x + (line_width - employee_text_width) / 2.5
-        supervisor_text_x = supervisor_signature_x + (line_width - supervisor_text_width) / 2.5
-
-        p.drawString(employee_text_x, signature_y - 12, "Signature of Employee")
-        p.drawString(supervisor_text_x, signature_y - 12, "Signature of Supervisor")
+        
+        p.drawString(employee_signature_x + 60, signature_y - 12, "Signature of Employee")
+        p.drawString(supervisor_signature_x + 60, signature_y - 12, "Signature of Supervisor")
         
         p.save()
     except Employee.DoesNotExist:
@@ -464,7 +426,7 @@ def create_employee(request):
             email = form.cleaned_data.get('email')
             # Check for existing non-deleted email before saving
             if Employee.objects.filter(email=email, is_deleted=False).exists():
-                form.add_error('email', 'This email is already registered to an active account.')
+                form.add_error('email', 'This email is already registered to an inaactive account.')
             else:
                 try:
                     # Set is_deleted=False explicitly when creating
