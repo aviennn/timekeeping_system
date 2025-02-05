@@ -133,8 +133,8 @@
                             {% csrf_token %}
                             
                             {% if form.non_field_errors %}
-                                <div class="alert alert-danger">
-                                    {{ form.non_field_errors }}
+                                <div class="alert alert-danger error-message text-center">
+                                    <i class="fas fa-times-circle"></i> {{ form.non_field_errors }}
                                 </div>
                             {% endif %}
                     

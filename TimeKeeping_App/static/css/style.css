@@ -9,6 +9,14 @@ html, body {
     padding: 0;
 }
 
+body {
+    background-image: 
+        url('/static/images/bg.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
 .main {
     flex-grow: 1;
     padding-bottom: 20px;
@@ -326,6 +334,10 @@ html, body {
 
 .add-employee-modal {
     background: linear-gradient(to right, #5f9eff, #a8cfff);
+}
+
+.add-record-modal {
+    background: linear-gradient(to right, #3ca6b6, #9ad2de);
 }
 
 @media (max-width: 1280px) {
