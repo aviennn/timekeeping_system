@@ -39,15 +39,23 @@ def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
     current_time = timezone.now().astimezone(philippines_tz)
     current_employee = None
+    error_message = None
 
+    # Check if user is already logged in
     if 'current_employee_id' in request.session:
         try:
             current_employee = Employee.objects.get(id=request.session['current_employee_id'])
         except Employee.DoesNotExist:
+            request.session.pop('current_employee_id', None)
             current_employee = None
+
+    if request.method == 'POST':
+        if not current_employee:  # Login process
+            username = request.POST.get('username')
+            password = request.POST.get('password')
             recaptcha_response = request.POST.get('g-recaptcha-response')
 
-            #reCAPTCHA
+            # Verify reCAPTCHA before login
             recaptcha_verify = requests.post('https://www.google.com/recaptcha/api/siteverify', {
                 'secret': settings.RECAPTCHA_PRIVATE_KEY,
                 'response': recaptcha_response
@@ -60,26 +68,16 @@ def dashboard(request):
                     'current_datetime': current_time,
                 })
 
-    error_message = None
-
-    if request.method == 'POST':
-        if not current_employee:
-            username = request.POST.get('username')
-            password = request.POST.get('password')
-
             if username and password:
                 try:
                     employee = Employee.objects.get(username=username)
                     if check_password(password, employee.password):
-                        current_employee = employee
                         request.session['current_employee_id'] = employee.id
                         return redirect('dashboard')
-                    else:
-                        error_message = 'Incorrect password. Please try again.'
                 except Employee.DoesNotExist:
-                    error_message = 'Username not found. Please check your credentials.'
+                    error_message = "Invalid username or password."
 
-        if current_employee:
+        if current_employee:  # Handle clock-in, clock-out, and lunch toggle
             action = request.POST.get('action')
             if action:
                 today = current_time.date()
@@ -89,10 +87,11 @@ def dashboard(request):
                 ).order_by('-clock_in').first()
 
                 create_new_record = False
+
                 if action == 'clock_in':
                     if not latest_record or latest_record.clock_out:
                         create_new_record = True
-                    elif latest_record and not latest_record.clock_out:
+                    else:
                         error_message = 'You have already clocked in. Please clock out from your previous session first.'
 
                 elif action == 'clock_out' and latest_record:
@@ -102,20 +101,18 @@ def dashboard(request):
                         latest_record.clock_out = current_time.time()
                         latest_record.save()
 
-                elif action == 'lunch_toggle':
-                    if not latest_record or latest_record.clock_out:
+                elif action == 'lunch_toggle' and latest_record:
+                    if not latest_record.clock_in or latest_record.clock_out:
                         error_message = 'Please clock in before starting your lunch break.'
+                    elif not latest_record.lunch_start:
+                        latest_record.lunch_start = current_time.time()
+                        latest_record.lunch_end = None
+                        latest_record.save()
+                    elif not latest_record.lunch_end:
+                        latest_record.lunch_end = current_time.time()
+                        latest_record.save()
                     else:
-                        if not latest_record.lunch_start:
-                            latest_record.lunch_start = current_time.time()
-                            latest_record.lunch_end = None
-                        elif not latest_record.lunch_end:
-                            latest_record.lunch_end = current_time.time()
-                        else:
-                            error_message = 'You have already taken your lunch break for today.'
-                        
-                        if not error_message:
-                            latest_record.save()
+                        error_message = 'You have already taken your lunch break for today.'
 
                 if create_new_record:
                     TimeRecord.objects.create(
@@ -124,12 +121,7 @@ def dashboard(request):
                         clock_in=current_time.time()
                     )
 
-    if not current_employee and 'current_employee_id' in request.session:
-        try:
-            current_employee = Employee.objects.get(id=request.session['current_employee_id'])
-        except Employee.DoesNotExist:
-            current_employee = None
-
+    # Update user status
     status = "Awaiting Status"
     lunch_button_label = "Start Lunch"
     if current_employee:
@@ -147,13 +139,11 @@ def dashboard(request):
 
             if latest_record.lunch_start and not latest_record.lunch_end:
                 lunch_button_label = "Stop Lunch"
-            elif latest_record.lunch_start and latest_record.lunch_end:
-                lunch_button_label = "Start Lunch"
 
     return render(request, 'dashboard.html', {
         'employees': Employee.objects.all(),
         'current_employee': current_employee,
-        'time_records' : TimeRecord.objects.filter(employee=current_employee, date=today).order_by('-clock_in') if current_employee else [],   
+        'time_records': TimeRecord.objects.filter(employee=current_employee, date=today).order_by('-clock_in') if current_employee else [],
         'current_datetime': current_time,
         'status': status,
         'lunch_button_label': lunch_button_label,
@@ -367,24 +357,19 @@ def admin_dashboard(request):
 
         if not recaptcha_verify.get('success'):
             error_message = "Please complete the reCAPTCHA verification."
-            return render(request, 'admin_dashboard.html', {
-                'employees': employees, 
-                'is_authenticated': request.user.is_authenticated,
-                'error_message': error_message,
-            })
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            return redirect('admin_dashboard')
         else:
-            error_message = "Invalid username or password."
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                login(request, user)
+                return redirect('admin_dashboard')
+            else:
+                error_message = "Invalid username or password."
 
     return render(request, 'admin_dashboard.html', {
         'employees': employees, 
         'is_authenticated': request.user.is_authenticated,
-        'error_message': error_message,
+        'error_message': error_message,  # Always pass error_message
     })
-
 
 class EmployeeRecord(UserPassesTestMixin, View):
     def test_func(self):
@@ -412,8 +397,7 @@ class EmployeeRecord(UserPassesTestMixin, View):
             "is_authenticated": request.user.is_authenticated,
             "time_records": time_records
         })
-
-
+        
 def logout_admin(request):
     logout(request)  
     return redirect('admin_dashboard')
