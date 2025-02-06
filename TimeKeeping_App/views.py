@@ -218,13 +218,14 @@ def export_pdf(request, pk):
     page_width, page_height = letter
     margin = 36
     content_width = page_width - (2 * margin)
-    top_margin_for_table = 120  # Increased to ensure consistency
-    bottom_margin = margin + 80  # Reserved for signatures & date range
+    top_margin_for_table = 130  # Increased to accommodate new information
+    bottom_margin = margin + 80
+    right_margin = page_width - margin
     available_height = page_height - top_margin_for_table - bottom_margin
+
 
     p = canvas.Canvas(response, pagesize=letter)
     try:
-        current_employee = Employee.objects.get(id=pk)
         full_name = f"{current_employee.first_name} {current_employee.last_name}"
         start_date = request.GET.get('datefrom')
         end_date = request.GET.get('dateto')
@@ -234,6 +235,7 @@ def export_pdf(request, pk):
         else:
             records = TimeRecord.objects.filter(employee=current_employee).order_by('date')
 
+        # Logo and title drawing code
         icon_path = os.path.join(settings.BASE_DIR, 'TimeKeeping_App', 'static', 'images', 'icon-3.jpg')
         icon_x = margin
         icon_y = page_height - margin - 14
@@ -259,6 +261,7 @@ def export_pdf(request, pk):
         subtitle_y_position = page_height - margin - 25
         p.drawString((page_width - subtitle_width) / 2, subtitle_y_position, subtitle_text)
 
+        # Employee name
         p.setFont("Helvetica-Bold", 12)
         employee_name_label_text = "Employee Name:"
         employee_name_label_width = p.stringWidth(employee_name_label_text, "Helvetica-Bold", 12)
@@ -270,7 +273,59 @@ def export_pdf(request, pk):
         employee_name_y_position = employee_name_label_y_position - 20
         p.drawString((page_width - employee_name_width) / 2, employee_name_y_position, full_name)
 
+        # Date range
+        date_range_y_position = employee_name_y_position - 25
+        if start_date and end_date:
+            date_range_text = f"Date Range: {format_readable_date(start_date)} to {format_readable_date(end_date)}"
+        else:
+            date_range_text = "All Records"
+        
+        p.setFont("Helvetica", 11)
+        date_range_width = p.stringWidth(date_range_text, "Helvetica", 11)
+        p.drawString((page_width - date_range_width) / 2, date_range_y_position, date_range_text)
 
+        # Calculate total hours and overtime
+        total_minutes = 0
+        total_overtime_minutes = 0
+        
+        for record in records:
+            if record.clock_in and record.clock_out:
+                clock_in_dt = datetime.combine(record.date, record.clock_in)
+                clock_out_dt = datetime.combine(record.date, record.clock_out)
+                duration = clock_out_dt - clock_in_dt
+                
+                if record.lunch_start and record.lunch_end:
+                    lunch_start_dt = datetime.combine(record.date, record.lunch_start)
+                    lunch_end_dt = datetime.combine(record.date, record.lunch_end)
+                    lunch_duration = lunch_end_dt - lunch_start_dt
+                    duration = duration - lunch_duration
+                
+                total_minutes += duration.total_seconds() / 60
+
+            # Modified overtime calculation
+            if record.overtime_hours:
+                try:
+                    overtime_str = str(record.overtime_hours)
+                    if ':' in overtime_str:
+                        hours, minutes, *_ = overtime_str.split(':')
+                        overtime_minutes = int(hours) * 60 + int(minutes)
+                        total_overtime_minutes += overtime_minutes
+                except (ValueError, AttributeError, IndexError):
+                    print(f"Error parsing overtime for record {record.id}: {record.overtime_hours}")
+                    continue
+
+        # Format total hours
+        total_hours = int(total_minutes // 60)
+        remaining_minutes = int(total_minutes % 60)
+        total_hours_text = f"{total_hours} hour{'s' if total_hours != 1 else ''} {remaining_minutes} minute{'s' if remaining_minutes != 1 else ''}"
+
+        # Format overtime hours
+        overtime_hours = int(total_overtime_minutes // 60)
+        overtime_minutes = int(total_overtime_minutes % 60)
+        total_overtime_text = f"{overtime_hours} hour{'s' if overtime_hours != 1 else ''} {overtime_minutes} minute{'s' if overtime_minutes != 1 else ''}"
+
+
+        # Table generation
         table_y_position = page_height - top_margin_for_table
         data = [["Date", "Clock In", "Clock Out", "Total Hours", "Overtime"]]
         for record in records:
@@ -283,7 +338,7 @@ def export_pdf(request, pk):
                 overtimeduration
             ])
         
-        rows_per_page = int(available_height / 20)
+        rows_per_page = 25
         num_columns = len(data[0])
         column_width = content_width / num_columns
         
@@ -300,25 +355,47 @@ def export_pdf(request, pk):
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
                 ('TOPPADDING', (0, 0), (-1, -1), 4),
             ]))
-            
+
             table.wrapOn(p, content_width, available_height)
             table.drawOn(p, margin, table_y_position - (len(table_chunk) * 20))
-            
+
             start_row += rows_per_page
             if start_row < len(data):
                 p.showPage()
-                table_y_position = page_height - top_margin_for_table  # Reset Y position
-        
-        date_range_y_position = margin + 50
-        if start_date and end_date:
-            date_range_text = f"Date Range: {format_readable_date(start_date)} to {format_readable_date(end_date)}"
-        else:
-            date_range_text = "All Records"
-        
+                p.setFont("Helvetica", 11)
+                
+                # Reset position to avoid extra spacing
+                table_y_position = page_height - margin  # Adjust this value
+
+        table_bottom_y = table_y_position - (len(table_chunk) * 20)  # Adjusting space below table
+        # Draw total hours and overtime below the table
+        total_hours_y = table_bottom_y - 20
+        overtime_y = total_hours_y - 20
+
+        p.setFont("Helvetica-Bold", 11)
+        total_hours_label = "Overall Total Hours:"
+        total_overtime_label = "Overall Overtime Hours:"
+
+        # Compute text width to center align
+        total_hours_label_width = p.stringWidth(total_hours_label, "Helvetica-Bold", 11)
+        total_overtime_label_width = p.stringWidth(total_overtime_label, "Helvetica-Bold", 11)
+
+        total_hours_text_width = p.stringWidth(total_hours_text, "Helvetica", 11)
+        total_overtime_text_width = p.stringWidth(total_overtime_text, "Helvetica", 11)
+
+        # Calculate centered x-position
+        total_hours_x = right_margin - total_hours_label_width - total_hours_text_width - 10
+        total_overtime_x = right_margin - total_overtime_label_width - total_overtime_text_width - 10
+
+
+        p.drawString(total_hours_x, total_hours_y, total_hours_label)
+        p.drawString(total_overtime_x, overtime_y, total_overtime_label)
+
         p.setFont("Helvetica", 11)
-        date_range_width = p.stringWidth(date_range_text, "Helvetica", 11)
-        p.drawString((page_width - date_range_width) / 2, date_range_y_position, date_range_text)
-        
+        p.drawString(total_hours_x + total_hours_label_width + 10, total_hours_y, total_hours_text)
+        p.drawString(total_overtime_x + total_overtime_label_width + 10, overtime_y, total_overtime_text)
+            
+        # Signatures
         signature_y = margin + 20
         center_x = page_width / 2
         line_width = 200
@@ -333,12 +410,9 @@ def export_pdf(request, pk):
         
         p.save()
     except Employee.DoesNotExist:
-        p.drawString(margin, page_height - margin, "No records were found.")
-        p.save()
+        return HttpResponse("Employee not found", content_type="text/plain", status=404)
 
     return response
-
-
 
 def logout_view(request):
     request.session.pop('current_employee_id', None)  
