@@ -72,10 +72,13 @@ def dashboard(request):
                 try:
                     employee = Employee.objects.get(username=username)
                     if check_password(password, employee.password):
+                        current_employee = employee
                         request.session['current_employee_id'] = employee.id
                         return redirect('dashboard')
+                    else:
+                        error_message = 'Incorrect password. Please try again.'
                 except Employee.DoesNotExist:
-                    error_message = "Invalid username or password."
+                    error_message = 'Username not found. Please check your credentials.'
 
         if current_employee:  # Handle clock-in, clock-out, and lunch toggle
             action = request.POST.get('action')
