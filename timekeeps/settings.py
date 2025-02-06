@@ -80,7 +80,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'timekeeping_system', 
         'USER': 'root',  
-        'PASSWORD': 'W0tdafrehk!,',  
+        'PASSWORD': '',  
         'HOST': 'localhost',  
         'PORT': '3306',  
     }
@@ -137,7 +137,7 @@ JAZZMIN_SETTINGS = {
     #"site_logo_classes": "",
     "site_icon":"images/favicon.png",
     "welcome_sign": "Academe TS by GOCLOUD",
-    "copyright": "GOCLOUD Asia, Inc",
+    "copyright": "GOCLOUD Inc",
     #"search_model": ["auth.User", "auth.Group"],
     "user_avatar": "",
 
@@ -239,4 +239,4 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'academetsmain@gmail.com'
-EMAIL_HOST_PASSWORD = 'ytbj gzks dzxk csrg'
+EMAIL_HOST_PASSWORD = ''
