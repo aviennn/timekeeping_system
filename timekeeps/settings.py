@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'TimeKeeping_App',
+    'captcha', 
+    'django_recaptcha',
 ]
 
 MIDDLEWARE = [
@@ -80,7 +82,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'timekeeping_system', 
         'USER': 'root',  
-        'PASSWORD': 'W0tdafrehk!,',  
+        'PASSWORD': 'change me',  
         'HOST': 'localhost',  
         'PORT': '3306',  
     }
@@ -239,4 +241,9 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'academetsmain@gmail.com'
-EMAIL_HOST_PASSWORD = 'ytbj gzks dzxk csrg'
+EMAIL_HOST_PASSWORD = 'change me'
+
+
+RECAPTCHA_PUBLIC_KEY = '' # Site Key
+RECAPTCHA_PRIVATE_KEY = '' # Secret Key
+#ECAPTCHA_REQUIRED_SCORE = 0.85 (Not applicable, only for v3 recaptcha) 

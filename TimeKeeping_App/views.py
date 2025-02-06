@@ -19,6 +19,7 @@ from datetime import datetime
 from django.templatetags.static import static
 from django.conf import settings
 import os
+import requests
 import pandas as pd
 from .forms import EmployeeCreationForm
 from .models import Employee
@@ -44,6 +45,20 @@ def dashboard(request):
             current_employee = Employee.objects.get(id=request.session['current_employee_id'])
         except Employee.DoesNotExist:
             current_employee = None
+            recaptcha_response = request.POST.get('g-recaptcha-response')
+
+            #reCAPTCHA
+            recaptcha_verify = requests.post('https://www.google.com/recaptcha/api/siteverify', {
+                'secret': settings.RECAPTCHA_PRIVATE_KEY,
+                'response': recaptcha_response
+            }).json()
+
+            if not recaptcha_verify.get('success'):
+                return render(request, 'dashboard.html', {
+                    'error_message': 'Please complete the reCAPTCHA verification.',
+                    'employees': Employee.objects.all(),
+                    'current_datetime': current_time,
+                })
 
     error_message = None
 
@@ -341,6 +356,21 @@ def admin_dashboard(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
+        recaptcha_response = request.POST.get('g-recaptcha-response')
+
+        # Verify reCAPTCHA
+        recaptcha_verify = requests.post('https://www.google.com/recaptcha/api/siteverify', {
+            'secret': settings.RECAPTCHA_PRIVATE_KEY,
+            'response': recaptcha_response
+        }).json()
+
+        if not recaptcha_verify.get('success'):
+            error_message = "Please complete the reCAPTCHA verification."
+            return render(request, 'admin_dashboard.html', {
+                'employees': employees, 
+                'is_authenticated': request.user.is_authenticated,
+                'error_message': error_message,
+            })
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
