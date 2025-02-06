@@ -11,6 +11,9 @@
 
         <link rel="stylesheet" type="text/css" href="{% static '/css/style.css/' %}">
         <link rel="icon" type="image/x-icon" href="{% static '/images/favicon.png/' %}">
+
+        <!-- For reCAPTCHA -->
+        <script src="https://www.google.com/recaptcha/api.js" async defer></script> 
         
         <title>{% block title %}Academe TS{% endblock %}</title>
     </head>
@@ -21,7 +24,7 @@
 
         <div id="content" name="content" class="main pt-3 pb-4">
             <div class="d-flex justify-content-center">
-                <div class="col-sm-7">
+                <div class="col-xl-9">
                     {% block content %}
                     {% endblock %}
                 </div>
@@ -39,7 +42,7 @@
         
                     <div class="footer-copyright text-center text-dark p-3">
                         © 2025 
-                        <a class="gc-link text-dark mb-2" href="https://gocloudgroup.com/">GOCLOUD Asia, Inc.</a>
+                        <a class="gc-link text-dark mb-2" href="https://gocloudgroup.com/">GOCLOUD Inc.</a>
                     </div>
                 </div>
             </footer>

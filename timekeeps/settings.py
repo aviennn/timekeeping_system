@@ -42,6 +42,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'TimeKeeping_App',
+    'captcha',
+    'django_recaptcha',
+
 ]
 
 MIDDLEWARE = [
@@ -243,3 +246,6 @@ EMAIL_PORT = os.getenv("EMAIL_PORT", default="")
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", default="")
+
+RECAPTCHA_PUBLIC_KEY = os.getenv("RECAPTCHA_PUBLIC_KEY", default="")
+RECAPTCHA_PRIVATE_KEY = os.getenv("RECAPTCHA_PRIVATE_KEY", default="")

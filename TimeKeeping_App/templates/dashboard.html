@@ -66,9 +66,10 @@
     {% endif %}
 
     <div class="d-flex justify-content-center">
-        <div id="clock" class="clock col-sm-5 shadow">
-                <h1><i class='far fa-clock'></i></h1><div id="time" class="time"></div>
-            <div id="date" class="date"></div>
+        <div id="clock" class="clock shadow">
+            <h1 style="margin-bottom: -6px;"><i class='far fa-clock'></i></h1>
+            <div id="time" class="time" style="margin-bottom: -15px;"></div>
+            <div id="date" class="date" style="margin-bottom: 0.1px;"></div>
         </div>
     </div>
 
@@ -90,8 +91,8 @@
 
     {% if not current_employee %}
     <form method="post">
+        {% csrf_token %}
         <div class="form-group">
-            {% csrf_token %}
             <input class="form-control" type="text" name="username" placeholder="Enter Username" required>
             <div class="password-container">
                 <div class="input-group">
@@ -103,6 +104,9 @@
                     </div>
                 </div>
             </div>
+            <!-- Add reCAPTCHA -->
+            <div class="g-recaptcha" data-sitekey="6LfU480qAAAAAOP544VCY6VRhtcax-nJEO_ct9p3" style="margin-top: 10px;"></div>
+            
             <div class="d-flex justify-content-between align-items-center mt-2">
                 <a href="{% url 'forgot_password' %}" class="text-primary">Forgot Password?</a>
             </div>
@@ -110,7 +114,7 @@
         </div>
     </form>
     {% endif %}
-
+    
         {% if current_employee %}
         <div>
             <div class="mt-5 mb-4 text-center {% if status == 'Clocked In' %}status-active{% elif status == 'Clocked Out' %}status-inactive{% else %}status-pending{% endif %}">

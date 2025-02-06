@@ -22,7 +22,15 @@ class SoftDelete(models.Model):
         
     class Meta:
         abstract = True
-
+        '''
+        constraints = [
+            models.UniqueConstraint(
+                fields=['email'],
+                condition=models.Q(is_deleted=False),
+                name='unique_active_email'
+            )
+        ]
+        '''
 class EmployeeManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(is_deleted=False)
@@ -42,6 +50,7 @@ class Employee(SoftDelete, models.Model):
 
     
     objects = EmployeeManager()
+    
 
     def save(self, *args, **kwargs):
         if not self.username:

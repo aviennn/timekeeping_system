@@ -65,36 +65,53 @@
     <div class="modal fade" id="addTimeRecordModal" tabindex="-1" aria-labelledby="addTimeRecordModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addTimeRecordModalLabel">Add Time Record</h5>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <span>&times;</span>
+                <div class="add-record-modal modal-header">
+                    <h5 class="modal-title font-weight-bold text-white" id="addTimeRecordModalLabel"><i class="fas fa-user-plus"></i> Add Time Record</h5>
+                    
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span class="text-white" aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <div class="modal-body">
+
+                <div class="modal-body m-2 px-5">
+                    <div class="d-flex justify-content-center mb-4">
+                        <img src="/static/images/3d-13.png" height="250">
+                    </div>
+
                     <form method="post" action="{% url 'create_timerecord' pk=employee.id %}">
                         {% csrf_token %}
                         <div class="form-group">
-                            <label for="date">Date</label>
+                            <label class="font-weight-bold text-secondary" for="middle_name" for="date">Date</label>
                             <input type="date" class="form-control" name="date" required>
                         </div>
-                        <div class="form-group">
-                            <label for="clock_in">Clock In</label>
-                            <input type="time" class="form-control" name="clock_in" required>
+                        
+                        <div class="row">
+                            <div class="col mb-3">
+                                <label class="font-weight-bold text-secondary" for="clock_in">Clock In</label>
+                                <input type="time" class="form-control" name="clock_in" required>
+                            </div>
+                            
+                            <div class="col mb-3">
+                                <label class="font-weight-bold text-secondary" for="clock_out">Clock Out</label>
+                                <input type="time" class="form-control" name="clock_out">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="clock_out">Clock Out</label>
-                            <input type="time" class="form-control" name="clock_out">
+                        
+                        <div class="row mb-3">
+                            <div class="col">
+                                <label class="font-weight-bold text-secondary" for="lunch_start">Lunch Start</label>
+                                <input type="time" class="form-control" name="lunch_start">
+                            </div>
+                            
+                            <div class="col mb-2">
+                                <label class="font-weight-bold text-secondary" for="lunch_end">Lunch End</label>
+                                <input type="time" class="form-control" name="lunch_end">
+                            </div>
+                        </div><hr>
+
+                        <div class="mx-3 d-flex justify-content-center">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Add Record</button>
                         </div>
-                        <div class="form-group">
-                            <label for="lunch_start">Lunch Start</label>
-                            <input type="time" class="form-control" name="lunch_start">
-                        </div>
-                        <div class="form-group">
-                            <label for="lunch_end">Lunch End</label>
-                            <input type="time" class="form-control" name="lunch_end">
-                        </div>                        
-                        <button type="submit" class="btn btn-primary">Save</button>
                     </form>
                 </div>
             </div>
@@ -161,7 +178,7 @@
                         <tr class="ts-tr">
                             <td>{{ record.date }}</td>
                             <td>{{ record.clock_in|time:"g:i A" }}</td>
-                            <td>{{ record.clock_out|time:"g:i A" }}</td>
+                            <td>{{ record.clock_out|time:"g:i A"|default:"None" }}</td>
                             <td>{{ record.lunch_break_duration }}</td>
                             <td>{{ record.total_hours }}</td>
                             <td>{{ record.overtime_hours|default:"None" }}</td>
