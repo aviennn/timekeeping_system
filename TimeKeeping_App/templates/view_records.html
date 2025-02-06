@@ -61,7 +61,15 @@
         <p class="text-secondary"><b>Username:</b> {{ employee.username }}</p>
         <p class="text-secondary"><b>Full Name:</b> {{ employee.first_name }} {{ employee.last_name }}</p>
     </div>
-
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}" role="alert">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
     <div class="modal fade" id="addTimeRecordModal" tabindex="-1" aria-labelledby="addTimeRecordModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
