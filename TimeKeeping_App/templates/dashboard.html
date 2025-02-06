@@ -162,6 +162,11 @@
             </div>
         </div>
     {% else %}
+    {% if error_message %}
+    <div class="alert alert-warning error-message text-center mt-3">
+        <i class="fas fa-exclamation-triangle"></i> {{ error_message }}
+    </div>    
+    {% endif %}
         <div class="loginp-container">
             <div class="row justify-content-center align-items-stretch no-gutters">
                 <div class="col-md-6 login-container">
