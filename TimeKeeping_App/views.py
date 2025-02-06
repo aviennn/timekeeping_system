@@ -302,27 +302,29 @@ def export_pdf(request, pk):
                 
                 total_minutes += duration.total_seconds() / 60
 
-            # Modified overtime calculation
+            # Fix for Overtime Calculation
             if record.overtime_hours:
+                overtime_str = str(record.overtime_hours).strip().lower()
+                
                 try:
-                    overtime_str = str(record.overtime_hours)
-                    if ':' in overtime_str:
-                        hours, minutes, *_ = overtime_str.split(':')
-                        overtime_minutes = int(hours) * 60 + int(minutes)
-                        total_overtime_minutes += overtime_minutes
-                except (ValueError, AttributeError, IndexError):
+                    if "hour" in overtime_str or "minute" in overtime_str:
+                        hours = 0
+                        minutes = 0
+                        
+                        if "hour" in overtime_str:
+                            hours = int(overtime_str.split("hour")[0].strip())
+                        if "minute" in overtime_str:
+                            minutes = int(overtime_str.split("minute")[0].split()[-1].strip())
+                        
+                        total_overtime_minutes += (hours * 60) + minutes
+
+                    elif ":" in overtime_str:  # Handle "HH:MM" format
+                        hours, minutes = map(int, overtime_str.split(':'))
+                        total_overtime_minutes += (hours * 60) + minutes
+
+                except (ValueError, IndexError):
                     print(f"Error parsing overtime for record {record.id}: {record.overtime_hours}")
                     continue
-
-        # Format total hours
-        total_hours = int(total_minutes // 60)
-        remaining_minutes = int(total_minutes % 60)
-        total_hours_text = f"{total_hours} hour{'s' if total_hours != 1 else ''} {remaining_minutes} minute{'s' if remaining_minutes != 1 else ''}"
-
-        # Format overtime hours
-        overtime_hours = int(total_overtime_minutes // 60)
-        overtime_minutes = int(total_overtime_minutes % 60)
-        total_overtime_text = f"{overtime_hours} hour{'s' if overtime_hours != 1 else ''} {overtime_minutes} minute{'s' if overtime_minutes != 1 else ''}"
 
 
         # Table generation
@@ -366,6 +368,16 @@ def export_pdf(request, pk):
                 
                 # Reset position to avoid extra spacing
                 table_y_position = page_height - margin  # Adjust this value
+
+        # Format total hours
+        total_hours = int(total_minutes // 60)
+        remaining_minutes = int(total_minutes % 60)
+        total_hours_text = f"{total_hours} hour{'s' if total_hours != 1 else ''} {remaining_minutes} minute{'s' if remaining_minutes != 1 else ''}"
+
+        # Format overtime hours
+        overtime_hours = int(total_overtime_minutes // 60)
+        overtime_minutes = int(total_overtime_minutes % 60)
+        total_overtime_text = f"{overtime_hours} hour{'s' if overtime_hours != 1 else ''} {overtime_minutes} minute{'s' if overtime_minutes != 1 else ''}"
 
         table_bottom_y = table_y_position - (len(table_chunk) * 20)  # Adjusting space below table
         # Draw total hours and overtime below the table
