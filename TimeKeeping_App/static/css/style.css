@@ -228,18 +228,25 @@ html, body {
     border-left: 5px solid #6c757d;
     padding: 15px 20px;
     margin: 20px auto;
-    max-width: 70%;
+    width: 559px;
     border-radius: 10px;
     box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.user-info {
+.user-info, .change-pw-form {
     background: #f8f9fa;
     border: 2px solid #efefef;
     margin: 20px auto;
-    max-width: 100%;
     border-radius: 15px;
     box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.user-info {
+    max-width: 100%;
+}
+
+.change-pw-form {
+    max-width: 446px;
 }
 
 .employee-info p {
@@ -340,7 +347,7 @@ html, body {
     background: linear-gradient(to right, #3ca6b6, #9ad2de);
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1371px) {
     .footer-logos {
         flex-direction: column !important;
         align-items: center;
@@ -416,6 +423,38 @@ html, body {
     .icon-box {
         padding: 20px;
         font-size: 1.3rem;
+    }
+}
+
+@media (max-width: 1372px) {
+    .main-content-area {
+        position: relative;
+        width: 100%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+}
+
+@media (min-width: 1440px) {
+    .main-content-area {
+        flex: 0 0 75%;
+        max-width: 75%;
+    }
+}
+
+@media (min-width: 1440px) and (max-width: 1536px) {
+    .change-pw-form {
+        max-width: 100%;
+    }
+}
+
+@media (min-width: 540px) and (max-width: 1280px) {
+    .welcome-text {
+        text-align: left;
+    }
+
+    .category-header, .category-header-2, .category-header-3, .category-header-4, .category-header-5 {
+        padding: 25px;
     }
 }
 
