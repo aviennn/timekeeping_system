@@ -210,6 +210,9 @@
         </div>
 
     {% else %}
+        {% if error_message %}
+        <div class="alert alert-danger">
+        {{ error_message }}
         <p>You are not logged in. Please log in.</p>
         <form method="post" action="{% url 'admin_dashboard' %}">
             {% csrf_token %}
