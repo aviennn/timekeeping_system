@@ -9,6 +9,14 @@ html, body {
     padding: 0;
 }
 
+body {
+    background-image: 
+        url('/static/images/bg.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
 .main {
     flex-grow: 1;
     padding-bottom: 20px;
@@ -173,7 +181,7 @@ html, body {
     font-size: 2rem;
     font-weight: bold;
     box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-    max-width: 70%;
+    max-width: 100%;
     margin: 20px auto;
 }
 
@@ -328,6 +336,10 @@ html, body {
     background: linear-gradient(to right, #5f9eff, #a8cfff);
 }
 
+.add-record-modal {
+    background: linear-gradient(to right, #3ca6b6, #9ad2de);
+}
+
 @media (max-width: 1280px) {
     .footer-logos {
         flex-direction: column !important;
@@ -347,7 +359,8 @@ html, body {
     }
 
     .date {
-        font-size: 1.2rem;
+        margin-top: 5px;
+        font-size: 1.0rem;
     }
 
     .footer-logos {
@@ -364,7 +377,6 @@ html, body {
     }
 
     .category-header, .category-header-2, .category-header-3, .category-header-4, .category-header-5 {
-        flex-direction: column;
         text-align: center;
         max-width: 100%;
         padding: 15px;
@@ -407,31 +419,35 @@ html, body {
     }
 }
 
-@media (min-width: 640px) and (max-width: 768px) {
-    #clock {
-        flex: 0 0 100%;
-        max-width: 100%;
+@media (max-width: 480px) {
+    .category-header, .category-header-2, .category-header-3, .category-header-4, .category-header-5 {
+        flex-direction: column;
     }
 }
 
-@media (min-width: 960px) {
+@media (max-width: 1280px) {
     #clock {
-        flex: 0 0 83.3333%;
-        max-width: 83.3333%;
+        width: 306px;
     }
 }
 
-@media (min-width: 1024px) and (max-width: 1536px) {
+@media (min-width: 1371px) and (max-width: 1536px) {
     #clock {
-        flex: 0 0 66.6667%;
-        max-width: 66.6667%;
+        width: 466px;
+    }
+}
+
+@media (max-width: 1280px) {
+    #clock {
+        padding-top: 10px;
+        padding-bottom: 10px;
     }
 }
 
 @media (min-width: 1745px) {
     #clock {
-        flex: 0 0 41.6667%;
-        max-width: 41.6667%;
+        width: 466px;
+        height: 199px;
     }
 }
 

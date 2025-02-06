@@ -74,9 +74,10 @@ def dashboard(request):
                         current_employee = employee
                         request.session['current_employee_id'] = employee.id
                         return redirect('dashboard')
+                    else:
+                        error_message = 'Incorrect password. Please try again.'
                 except Employee.DoesNotExist:
-                    current_employee = None
-                    request.session.pop('current_employee_id', None)
+                    error_message = 'Username not found. Please check your credentials.'
 
         if current_employee:
             action = request.POST.get('action')

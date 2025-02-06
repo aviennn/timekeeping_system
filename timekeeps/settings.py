@@ -11,7 +11,10 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -39,8 +42,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'TimeKeeping_App',
-    'captcha', 
+    'captcha',
     'django_recaptcha',
+
 ]
 
 MIDDLEWARE = [
@@ -80,11 +84,11 @@ WSGI_APPLICATION = 'timekeeps.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'timekeeping_system', 
-        'USER': 'root',  
-        'PASSWORD': 'change me',  
-        'HOST': 'localhost',  
-        'PORT': '3306',  
+        'NAME': os.getenv("DB_NAME", default=""), 
+        'USER': os.getenv("DB_USER", default=""),  
+        'PASSWORD': os.getenv("DB_USER_PASSWORD", default=""),  
+        'HOST': os.getenv("DB_HOST", default=""),  
+        'PORT': os.getenv("DB_DB_PORT", default=""),  
     }
 }
 
@@ -238,12 +242,10 @@ JAZZMIN_UI_TWEAKS = {
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
+EMAIL_PORT = os.getenv("EMAIL_PORT", default="")
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'academetsmain@gmail.com'
-EMAIL_HOST_PASSWORD = 'change me'
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", default="")
 
-
-RECAPTCHA_PUBLIC_KEY = '' # Site Key
-RECAPTCHA_PRIVATE_KEY = '' # Secret Key
-#ECAPTCHA_REQUIRED_SCORE = 0.85 (Not applicable, only for v3 recaptcha) 
+RECAPTCHA_PUBLIC_KEY = os.getenv("RECAPTCHA_PUBLIC_KEY", default="")
+RECAPTCHA_PRIVATE_KEY = os.getenv("RECAPTCHA_PRIVATE_KEY", default="")
