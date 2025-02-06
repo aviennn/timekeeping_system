@@ -221,8 +221,8 @@
                 <h2 class="text-center text-dark mt-5">Admin</h2>
                 <div class="text-center mb-3 text-dark">Please log in to continue.</div>
 
-                    <form class="card-body cardbody-color p-lg-5">
-                        <form method="post" action="{% url 'admin_dashboard' %}">
+                   
+                    <form class="card-body cardbody-color p-lg-5" method="post" action="{% url 'admin_dashboard' %}">
                         {% csrf_token %}
                         <div class="input-group mb-3 login-username-container">
                             <input type="text" class="form-control" name="username" placeholder="Enter Username" required>
@@ -237,11 +237,12 @@
                             <a href="{% url 'forgot_password' %}" class="forgot-password">Forgot Password?</a>
                         </div>
                         <div class="g-recaptcha" data-sitekey="6LfU480qAAAAAOP544VCY6VRhtcax-nJEO_ct9p3"></div>
-                        <button type="submit" class="btn btn-primary btn-block">Login</button>
+                        <button type="submit" class="btn btn-primary btn-block login-button">Login</button>
                     </form>
                 </div>
             </div>
         </div>
+
 {% endif %}
 
 {% endblock %}

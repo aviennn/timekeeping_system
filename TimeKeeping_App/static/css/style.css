@@ -624,7 +624,7 @@ html, body {
 }
 
 
-.btn-primary {
+.login-button {
     background-color: #0056b3;
     border-color: #004085;
     color: #fff;
@@ -689,5 +689,3 @@ html, body {
   a{
     text-decoration: none;
   }
-
-
