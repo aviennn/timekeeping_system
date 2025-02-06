@@ -211,8 +211,11 @@
 
     {% else %}
         {% if error_message %}
-        <div class="alert alert-danger">
-        {{ error_message }}
+            <div class="alert alert-danger">
+                {{ error_message }}
+            </div>
+        {% endif %}
+
         <p>You are not logged in. Please log in.</p>
         <form method="post" action="{% url 'admin_dashboard' %}">
             {% csrf_token %}
@@ -220,13 +223,12 @@
             <input type="text" id="username" name="username" required>
             <label for="password">Password:</label>
             <input type="password" id="password" name="password" required>
-            
+
             <!-- Add reCAPTCHA -->
             <div class="g-recaptcha" data-sitekey="6LfU480qAAAAAOP544VCY6VRhtcax-nJEO_ct9p3" style="margin-bottom: 5px;"></div>
-            
+
             <button type="submit">Login</button>
         </form>
-        
-        <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-    {% endif %}
+{% endif %}
+
 {% endblock %}
