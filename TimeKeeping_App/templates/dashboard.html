@@ -2,9 +2,9 @@
 
 {% block title %}
     {% if current_employee %}
-    {{ current_employee.username }} |  Academe TS
+        {{ current_employee.username }} |  Academe TS
     {% else %}
-    Log In |  Academe TS
+        Log In (Employee) |  Academe TS
     {% endif %}
 {% endblock %}
 
@@ -68,19 +68,19 @@
         </div>
 
         {% if error_message %}
-        <div class="alert alert-warning error-message text-center mt-3">
-            <i class="fas fa-exclamation-triangle"></i> {{ error_message }}
-        </div>    
+            <div class="alert alert-warning error-message text-center mt-3">
+                <i class="fas fa-exclamation-triangle"></i> {{ error_message }}
+            </div>    
         {% endif %}
 
         {% if messages %}
-        <div class="messages">
-            {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}" role="alert">
-                {{ message }}
+            <div class="messages">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}" role="alert">
+                    {{ message }}
+                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
-        </div>
         {% endif %}
         
             <div class="mt-5 mb-4 text-center {% if status == 'Clocked In' %}status-active{% elif status == 'Clocked Out' %}status-inactive{% else %}status-pending{% endif %}">
@@ -91,11 +91,11 @@
         
             {% with latest_record=time_records.first %}
             {% if latest_record and latest_record.lunch_start and not latest_record.lunch_end %}
-            <div class="mt-5 mb-5 text-center status-indicator lunch-active">
-                <span class="status-text-area-2 h5 py-3 px-2">
-                    <span class="status-icon text-secondary"><i class="fas fa-utensils"></i></span> <span class="py-2 px-3 status-text text-secondary">On Lunch Break</span>
-                </span>
-            </div>
+                <div class="mt-5 mb-5 text-center status-indicator lunch-active">
+                    <span class="status-text-area-2 h5 py-3 px-2">
+                        <span class="status-icon text-secondary"><i class="fas fa-utensils"></i></span> <span class="py-2 px-3 status-text text-secondary">On Lunch Break</span>
+                    </span>
+                </div>
             {% endif %}
             {% endwith %}
         
@@ -162,41 +162,115 @@
             </div>
         </div>
     {% else %}
+    
     {% if error_message %}
-    <div class="alert alert-warning error-message text-center mt-3">
-        <i class="fas fa-exclamation-triangle"></i> {{ error_message }}
-    </div>    
+        <div class="alert alert-warning error-message text-center mt-3">
+            <i class="fas fa-exclamation-triangle"></i> {{ error_message }}
+        </div>    
     {% endif %}
-        <div class="loginp-container">
-            <div class="row justify-content-center align-items-stretch no-gutters">
-                <div class="col-md-6 login-container">
-                    <img src="/static/images/gocloud.png" alt="GoCloud Logo" class="gocloud-logo">
-                    <h2 class="welcome-back">Welcome back!</h2>
-                    <p>Please log in to continue.</p>
+    
+    <div style="margin-top: 8%;">
+        <div class="login-form-custom d-flex justify-content-center">
+            <div class="row">
+                <div class="login-form-custom-container col-xl-6 shadow">
+                    <img class="login-logo mt-2 mb-4" src="/static/images/ats-2.png">
+                    
+                    <div class="mb-4">
+                        <p>Please log in to continue.</p>
+                    </div>
+
+                    <div class="mb-5 text-center">
+                        <span class="status-text-area-3 h5 py-3 px-2">
+                            <span class="status-icon text-secondary"><i class="fas fa-user-tie"></i></span> <span class="py-2 px-3 status-text text-secondary">
+                                Employee
+                            </span>
+                        </span>
+                    </div>
+
                     <form method="post">
                         {% csrf_token %}
-                        <div class="input-group mb-3 login-username-container">
-                            <input type="text" class="form-control" name="username" placeholder="Enter Username" required>
+                        <div class="input-group mb-3">
+                            <input type="text" name="username" class="form-control" placeholder="Username" required>
                         </div>
-                        <div class="input-group mb-3 login-password-container">
-                            <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
-                            <div class="input-group-append login-eye-icon">
-                                <i id="eye-icon" class="fas fa-eye toggle-password" onclick="togglePassword()"></i>
+
+                        <div class="input-group mb-3">
+                            <input type="password" name="password" id="password" class="form-control" placeholder="Password" required>
+                            <div class="input-group-append">
+                                <button type="button" class="btn btn-outline-secondary toggle-password" data-target="password">
+                                    <i class="fa fa-eye"></i>
+                                </button>
                             </div>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center mt-2">
-                            <a href="{% url 'forgot_password' %}" class="forgot-password">Forgot Password?</a>
+                        
+                        <div class="d-flex justify-content-center mt-2">
+                            <a href="{% url 'forgot_password' %}">Forgot Password?</a>
                         </div>
-                        <div class="g-recaptcha" data-sitekey="6LfU480qAAAAAOP544VCY6VRhtcax-nJEO_ct9p3"></div>
-                        <button type="submit" class="btn btn-primary btn-block login-button">Login</button>
+
+                        <div style="transform:scale(1.0);" class="g-recaptcha mt-3" data-sitekey="6LfU480qAAAAAOP544VCY6VRhtcax-nJEO_ct9p3"></div>
+                        
+                        <button class="login-button btn btn-primary w-100 mt-4 mb-2 font-weight-bold" type="submit">
+                            <i class="fa fa-sign-in mr-1"></i> Log In
+                        </button>
+                        <hr>
+                        
+                        <div class="d-flex justify-content-center mb-1">
+                            <a href="https://gocloudgroup.com/">
+                                <img class="login-logo-2" src="/static/images/gocloud.png">
+                            </a>
+                        </div>
+
+                        <h6 class="login-copyright text-center text-secondary font-weight-normal">
+                            &copy; 2025 GOCLOUD Inc.
+                        </h6>
                     </form>
                 </div>
                 
-                <div class="col-md-6 design-container">
-                    <!-- <h2 class="design-text">Academe TS</h2> -->
-                    <img src="/static/images/3d-1.png" alt="3D Icon" class="timekeeping-icon">
+                <div class="login-form-custom-container-2 col-xl-6 shadow">
+                    <img src="/static/images/3d-14.png" alt="3D Icon" class="timekeeping-icon">
                 </div>
             </div>
-        </div> 
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll(".toggle-password").forEach(function (button) {
+                button.addEventListener("click", function () {
+                    let input = document.getElementById(this.dataset.target);
+                    let icon = this.querySelector("i");
+                    if (input.type === "password") {
+                        input.type = "text";
+                        icon.classList.remove("fa-eye");
+                        icon.classList.add("fa-eye-slash");
+                    } else {
+                        input.type = "password";
+                        icon.classList.remove("fa-eye-slash");
+                        icon.classList.add("fa-eye");
+                    }
+                });
+            });
+        });
+    </script>
+    {% endif %}
+{% endblock %}
+
+{% block footer %}
+    {% if current_employee %}
+        <div>
+            <footer class="footer-custom text-white mt-auto">
+                <div class="footer-content-area text-center p-3">
+
+                    <div class="footer-logos d-flex justify-content-center mt-2 mb-2">
+                        <img src="/static/images/ats.png" alt="ATS Logo" class="logo-img-ats mt-3 mx-2">
+                        <img src="/static/images/gc.png" alt="GC Logo" class="logo-img-gc mt-2 mx-2">
+                    </div>
+
+                    <div class="footer-copyright text-center text-dark p-3">
+                        © 2025 
+                        <a class="gc-link text-dark mb-2" href="https://gocloudgroup.com/">GOCLOUD Inc.</a>
+                    </div>
+                </div>
+            </footer>
+        </div>
     {% endif %}
 {% endblock %}
