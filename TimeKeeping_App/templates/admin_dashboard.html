@@ -1,51 +1,52 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    {% if is_authenticated %}
-    {{ user.username }} |  Academe TS
+    {% if user.is_authenticated %}
+        {{ user.username }} | Academe TS
     {% else %}
-    Log In |  Academe TS
+        Log In (Admin) | Academe TS
     {% endif %}
 {% endblock %}
 
 {% block nav %}
-    <nav class="navbar navbar-dark navbar-expand-lg navbar-custom">
-        <div class="container-fluid">
-            <div class="nav-logo navbar-brand">
-                <img src="/static/images/icon-1.png" width="42" height="30" class="align-top">
-                <span class="h3">Academe TS</span>
-            </div>
+    {% if user.is_authenticated %}    
+        <nav class="navbar navbar-dark navbar-expand-lg navbar-custom">
+            <div class="container-fluid">
+                <div class="nav-logo navbar-brand">
+                    <img src="/static/images/icon-1.png" width="42" height="30" class="align-top">
+                    <span class="h3">Academe TS</span>
+                </div>
 
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
 
-            <div class="collapse navbar-collapse" id="navbarNavDropdown">
-                <ul class="navbar-nav ms-auto ml-auto">
-                    {% if is_authenticated %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            {{ user.username }}
-                        </a>
-                    
-                        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
-                            <a class="dropdown-item" href="{% url 'logout_admin' %}"><span class="text-secondary"><i class="fas fa-sign-out-alt"></i> | Log Out</span></a>
-                        </div>
-                    </li>
-                    {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'admin_dashboard' %}"> <i class="fas fa-sign-in-alt"></i> | Log In</a>
-                    </li>
-                    {% endif %}
-                </ul>
+                <div class="collapse navbar-collapse" id="navbarNavDropdown">
+                    <ul class="navbar-nav ms-auto ml-auto">
+                        {% if user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                {{ user.username }}
+                            </a>
+                        
+                            <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
+                                <a class="dropdown-item" href="{% url 'logout_admin' %}"><span class="text-secondary"><i class="fas fa-sign-out-alt"></i> | Log Out</span></a>
+                            </div>
+                        </li>
+                        {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'admin_dashboard' %}"> <i class="fas fa-sign-in-alt"></i> | Log In</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
             </div>
-        </div>
-    </nav>
+        </nav>
+    {% endif %}
 {% endblock %}
 
 {% block content %}
-
-    {% if is_authenticated %}
+    {% if user.is_authenticated %}
         <div class="category-header">
             <div class="text-section">
                 <p class="welcome-text">Welcome, <b>{{ user.username }}!</b></p>
@@ -54,10 +55,10 @@
             <img src="/static/images/3d-3.png">
         </div>
         {% if messages %}
-        <div class="alert-container">
+        <div class="alert-danger error-message text-center">
             {% for message in messages %}
-                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-                    {{ message }}
+                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
+                    <i class="fas fas fa-times-circle"></i> {{ message }}
                     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -65,90 +66,81 @@
             {% endfor %}
         </div>
     {% endif %}
-      
-
         <div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-labelledby="addEmployeeModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="addEmployeeModalLabel">Add Employee</h5>
+                    <div class="add-employee-modal modal-header">
+                        <h5 class="modal-title font-weight-bold text-white" id="addEmployeeModalLabel"><i class="fas fa-user-plus"></i> Add Employee</h5>
+                        
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
+                            <span class="text-white" aria-hidden="true">&times;</span>
                         </button>
                     </div>
-                    <div class="modal-body">
+
+                    <div class="modal-body m-2 px-5">
+                        <div class="d-flex justify-content-center mb-4">
+                            <img src="/static/images/3d-10.png" height="250">
+                        </div>
+
                         <form method="post" action="{% url 'create_employee' %}">
                             {% csrf_token %}
+                            
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger error-message text-center">
+                                    <i class="fas fa-times-circle"></i> {{ form.non_field_errors }}
+                                </div>
+                            {% endif %}
+                    
                             <div class="form-group">
-                                <label for="first_name">First Name</label>
-                                <input type="text" class="form-control" name="first_name" required>
+                                <label class="font-weight-bold text-secondary" for="first_name">First Name</label>
+                                <input type="text" class="form-control {% if form.first_name.errors %}is-invalid{% endif %}" name="first_name" value="{{ form.first_name.value }}" required>
+                                {% for error in form.first_name.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
                             </div>
+                    
                             <div class="form-group">
-                                <label for="middle_name">Middle Name</label>
-                                <input type="text" class="form-control" name="middle_name">
+                                <label class="font-weight-bold text-secondary" for="middle_name">Middle Name</label>
+                                <input type="text" class="form-control {% if form.middle_name.errors %}is-invalid{% endif %}" name="middle_name" value="{{ form.middle_name.value }}">
+                                {% for error in form.middle_name.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
                             </div>
+                    
                             <div class="form-group">
-                                <label for="last_name">Last Name</label>
-                                <input type="text" class="form-control" name="last_name" required>
+                                <label class="font-weight-bold text-secondary" for="last_name">Last Name</label>
+                                <input type="text" class="form-control {% if form.last_name.errors %}is-invalid{% endif %}" name="last_name" value="{{ form.last_name.value }}" required>
+                                {% for error in form.last_name.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
                             </div>
+                    
                             <div class="form-group">
-                                <label for="email">Email</label>
-                                <input type="email" class="form-control" name="email" required>
+                                <label class="font-weight-bold text-secondary" for="email">Email</label>
+                                <input type="email" class="form-control {% if form.email.errors %}is-invalid{% endif %}" name="email" value="{{ form.email.value }}" required>
+                                {% for error in form.email.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
                             </div>
-                            <div class="form-group">
-                                <label for="joined_date">Joined Date</label>
-                                <input type="date" class="form-control" name="joined_date" required>
+                    
+                            <div class="form-group mb-4">
+                                <label class="font-weight-bold text-secondary" for="joined_date">Join Date</label>
+                                <input type="date" class="form-control {% if form.joined_date.errors %}is-invalid{% endif %}" name="joined_date" value="{{ form.joined_date.value }}" required>
+                                {% for error in form.joined_date.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
                             </div>
-                            <button type="submit" class="btn btn-primary">Create Employee</button>
+                            <hr class="mt-4">
+                    
+                            <div class="mx-3 d-flex justify-content-center">
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Create Employee</button>
+                            </div>
                         </form>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="mb-3">
-            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addEmployeeModal">
-                Add Employee
-            </button>
-        </div>
 
-        <div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-labelledby="addEmployeeModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="addEmployeeModalLabel">Add Employee</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <form method="post" action="{% url 'create_employee' %}">
-                            {% csrf_token %}
-                            <div class="form-group">
-                                <label for="first_name">First Name</label>
-                                <input type="text" class="form-control" name="first_name" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="middle_name">Middle Name</label>
-                                <input type="text" class="form-control" name="middle_name">
-                            </div>
-                            <div class="form-group">
-                                <label for="last_name">Last Name</label>
-                                <input type="text" class="form-control" name="last_name" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="email">Email</label>
-                                <input type="email" class="form-control" name="email" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="joined_date">Joined Date</label>
-                                <input type="date" class="form-control" name="joined_date" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Create Employee</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
         <div class="card shadow mb-4">
             <div class="card-header bg-secondary py-3">
                 <h5 class="m-0 font-weight-bold text-light text-center">List of Employees</h5>
@@ -156,6 +148,12 @@
                 
             <div class="card-body">
                 <div class="table-responsive">
+                    <div class="mx-3 mb-3 d-flex justify-content-center">
+                        <button type="button" class="btn btn-lg btn-outline-primary px-4 py-2 mx-1 my-1" data-toggle="modal" data-target="#addEmployeeModal">
+                            <i class="fas fa-user-plus"></i> Add Employee
+                        </button>
+                    </div>
+
                     <table class="table table-striped table-bordered" id="dataTable" width="100%">
                         <thead>
                             <tr>
@@ -185,19 +183,22 @@
                                 <td>{{ employee.email }}</td>
                                 <td>{{ employee.joined_date }}</td>
                                 <td class="text-center">
-                                    <a href="{% url 'view_user_info' employee.id %}" class="btn btn-sm btn-outline-info px-2 py-2 mx-1 my-1 d-inline-block">
-                                        <i class="fas fa-user"></i> 
+                                    <a href="{% url 'view_user_info' employee.id %}" class="btn btn-lg btn-primary px-2 py-1 my-1 d-inline-block" title="View User Information">
+                                        <i class="fas fa-user-tag"></i>
                                     </a>
-                                    <a href="{% url 'view_records' employee.id %}" class="btn btn-sm btn-outline-warning px-2 py-2 mx-1 my-1 d-inline-block">
-                                        <i class="fas fa-clipboard-list"></i> 
+                                    
+                                    <a href="{% url 'view_records' employee.id %}" class="btn btn-lg btn-info px-2 py-1 my-1 d-inline-block" title="Manage Time Record">
+                                        <i class="fas fa-user-clock"></i> 
                                     </a>
-                                    <a href="{% url 'change_employee_password' employee.id %}" class="btn btn-sm btn-outline-secondary px-2 py-2 mx-1 my-1 d-inline-block">
-                                        <i class="fas fa-key"></i> 
+                                    
+                                    <a href="{% url 'change_employee_password' employee.id %}" class="btn btn-lg btn-success px-2 py-1 my-1 d-inline-block" title="Change Password">
+                                        <i class="fas fa-user-lock"></i> 
                                     </a>
-                                    <form method="POST" action="{% url 'delete_employee' employee.id %}" style="display:inline-block;" onsubmit="return confirm('Are you sure you want to delete this employee?');">
+                                    
+                                    <form action="{% url 'delete_employee' pk=employee.id %}" method="POST" class="d-inline-block" title="Delete Employee">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-outline-danger px-2 py-2 mx-1 my-1">
-                                            <i class="fas fa-trash"></i>
+                                        <button type="submit" class="btn btn-lg btn-danger px-2 py-1 my-1" title="Delete" onclick="return confirm('Are you sure you want to delete this record?');">
+                                            <i class="fas fa-user-minus"></i>
                                         </button>
                                     </form>
                                 </td>
@@ -208,16 +209,142 @@
                 </div>
             </div>
         </div>
-
     {% else %}
-        <p>You are not logged in. Please log in.</p>
-        <form method="post" action="{% url 'admin_dashboard' %}">
-            {% csrf_token %}
-            <label for="username">Username:</label>
-            <input type="text" id="username" name="username" required>
-            <label for="password">Password:</label>
-            <input type="password" id="password" name="password" required>
-            <button type="submit">Login</button>
-        </form>
+        {% if error_message %}
+            <div class="alert alert-danger text-center">
+                <i class="fas fas fa-times-circle"></i> {{ error_message }}
+            </div>
+        {% endif %}
+
+        <!--<div class="container">
+            <div class="col-md-6 offset-md-3">
+                <h2 class="text-center text-dark mt-5">Admin</h2>
+                <div class="text-center mb-3 text-dark">Please log in to continue.</div>
+
+                   
+                    <form class="card-body cardbody-color p-lg-5" method="post" action="{% url 'admin_dashboard' %}">
+                        {% csrf_token %}
+                        <div class="input-group mb-3 login-username-container">
+                            <input type="text" class="form-control" name="username" placeholder="Enter Username" required>
+                        </div>
+                        <div class="input-group mb-3 login-password-container">
+                            <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
+                            <div class="input-group-append login-eye-icon">
+                                <i id="eye-icon" class="fas fa-eye-slash toggle-password" onclick="togglePassword()"></i>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <a href="{% url 'forgot_password' %}" class="forgot-password">Forgot Password?</a>
+                        </div>
+                        <div class="g-recaptcha" data-sitekey="6LfU480qAAAAAOP544VCY6VRhtcax-nJEO_ct9p3"></div>
+                        <button type="submit" class="btn btn-primary btn-block login-button">Login</button>
+                    </form>
+                </div>
+            </div>
+        </div>-->
+
+        <div style="margin-top: 8%;">
+            <div class="login-form-custom d-flex justify-content-center">
+                <div class="row">
+                    <div class="login-form-custom-container col-xl-6 shadow">
+                        <img class="login-logo mt-2 mb-4" src="/static/images/ats-2.png">
+                        
+                        <div class="mb-4">
+                            <p>Please log in to continue.</p>
+                        </div>
+    
+                        <div class="mb-5 text-center">
+                            <span class="status-text-area-3 h5 py-3 px-2">
+                                <span class="status-icon text-secondary"><i class="fas fa-user-cog"></i></span> <span class="py-2 px-3 status-text text-secondary">
+                                    Admin
+                                </span>
+                            </span>
+                        </div>
+    
+                        <form method="post" action="{% url 'admin_dashboard' %}">
+                            {% csrf_token %}
+                            <div class="input-group mb-3">
+                                <input type="text" name="username" class="form-control" placeholder="Username" required>
+                            </div>
+    
+                            <div class="input-group mb-3">
+                                <input type="password" name="password" id="password" class="form-control" placeholder="Password" required>
+                                <div class="input-group-append">
+                                    <button type="button" class="btn btn-outline-secondary toggle-password" data-target="password">
+                                        <i class="fa fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- <div class="d-flex justify-content-center mt-2">
+                                <a href="{% url 'forgot_password' %}">Forgot Password?</a>
+                            </div> -->
+    
+                            <div style="transform:scale(1.0);" class="g-recaptcha mt-3" data-sitekey="6LfU480qAAAAAOP544VCY6VRhtcax-nJEO_ct9p3"></div>
+                            
+                            <button class="login-button btn btn-success w-100 mt-4 mb-2 font-weight-bold" type="submit">
+                                <i class="fa fa-sign-in mr-1"></i> Log In
+                            </button>
+                            <hr>
+                            
+                            <div class="d-flex justify-content-center mb-1">
+                                <a href="https://gocloudgroup.com/">
+                                    <img class="login-logo-2" src="/static/images/gocloud.png">
+                                </a>
+                            </div>
+    
+                            <h6 class="login-copyright text-center text-secondary font-weight-normal">
+                                &copy; 2025 GOCLOUD Inc.
+                            </h6>
+                        </form>
+                    </div>
+                    
+                    <div class="login-form-custom-container-3 col-xl-6 shadow">
+                        <img src="/static/images/3d-15.png" alt="3D Icon" class="timekeeping-icon">
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                document.querySelectorAll(".toggle-password").forEach(function (button) {
+                    button.addEventListener("click", function () {
+                        let input = document.getElementById(this.dataset.target);
+                        let icon = this.querySelector("i");
+                        if (input.type === "password") {
+                            input.type = "text";
+                            icon.classList.remove("fa-eye");
+                            icon.classList.add("fa-eye-slash");
+                        } else {
+                            input.type = "password";
+                            icon.classList.remove("fa-eye-slash");
+                            icon.classList.add("fa-eye");
+                        }
+                    });
+                });
+            });
+        </script>
+    {% endif %}
+{% endblock %}
+
+{% block footer %}
+    {% if user.is_authenticated %}
+        <div>
+            <footer class="footer-custom text-white mt-auto">
+                <div class="footer-content-area text-center p-3">
+
+                    <div class="footer-logos d-flex justify-content-center mt-2 mb-2">
+                        <img src="/static/images/ats.png" alt="ATS Logo" class="logo-img-ats mt-3 mx-2">
+                        <img src="/static/images/gc.png" alt="GC Logo" class="logo-img-gc mt-2 mx-2">
+                    </div>
+
+                    <div class="footer-copyright text-center text-dark p-3">
+                        © 2025 
+                        <a class="gc-link text-dark mb-2" href="https://gocloudgroup.com/">GOCLOUD Inc.</a>
+                    </div>
+                </div>
+            </footer>
+        </div>
     {% endif %}
 {% endblock %}

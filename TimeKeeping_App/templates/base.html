@@ -11,6 +11,9 @@
 
         <link rel="stylesheet" type="text/css" href="{% static '/css/style.css/' %}">
         <link rel="icon" type="image/x-icon" href="{% static '/images/favicon.png/' %}">
+
+        <!-- For reCAPTCHA -->
+        <script src="https://www.google.com/recaptcha/api.js" async defer></script> 
         
         <title>{% block title %}Academe TS{% endblock %}</title>
     </head>
@@ -21,29 +24,15 @@
 
         <div id="content" name="content" class="main pt-3 pb-4">
             <div class="d-flex justify-content-center">
-                <div class="col-sm-7">
+                <div class="main-content-area">
                     {% block content %}
                     {% endblock %}
                 </div>
             </div>
         </div>
-    
-        <div>
-            <footer class="footer-custom text-white mt-auto">
-                <div class="footer-content-area text-center p-3">
 
-                    <div class="footer-logos d-flex justify-content-center mt-2 mb-2">
-                        <img src="/static/images/ats.png" alt="ATS Logo" class="logo-img-ats mt-3 mx-2">
-                        <img src="/static/images/gc.png" alt="GC Logo" class="logo-img-gc mt-2 mx-2">
-                    </div>
-        
-                    <div class="footer-copyright text-center text-dark p-3">
-                        © 2025 
-                        <a class="gc-link text-dark mb-2" href="https://gocloudgroup.com/">GOCLOUD Asia, Inc.</a>
-                    </div>
-                </div>
-            </footer>
-        </div>
+        {% block footer %}
+        {% endblock %}
         
         <button type="button" class="btn btn-primary btn-floating btn-lg shadow" id="btn-back-to-top">
             <i class="fas fa-arrow-up"></i>
@@ -60,14 +49,6 @@
 
     <!-- dunno what a good position for this sorry nlng palitan nlng later -->
     {% if messages %}
-        <div class="messages">
-            {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                {{ message }}
-            </div>
-            {% endfor %}
-        </div>
-
         <script>
             // Auto-dismiss messages after 5 seconds
             document.addEventListener('DOMContentLoaded', function() {

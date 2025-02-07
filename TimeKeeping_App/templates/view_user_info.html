@@ -1,39 +1,196 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    {{ employee.username }} | User Information 
+    {{ employee.username }} | User Information
+{% endblock %}
+
+{% block nav %}
+    <nav class="navbar navbar-dark navbar-expand-lg navbar-custom">
+        <div class="container-fluid">
+            <div class="nav-logo navbar-brand">
+                <img src="/static/images/icon-1.png" width="42" height="30" class="align-top">
+                <span class="h3">Academe TS</span>
+            </div>
+
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNavDropdown">
+                <ul class="navbar-nav ms-auto ml-auto">
+                    {% if user.is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            {{ user.username }}
+                        </a>
+                    
+                        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
+                            <a class="dropdown-item" href="{% url 'logout_admin' %}"><span class="text-secondary"><i class="fas fa-sign-out-alt"></i> | Log Out</span></a>
+                        </div>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin_dashboard' %}"> <i class="fas fa-sign-in-alt"></i> | Log In</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
 {% endblock %}
 
 {% block content %}
-    <h2>{{ employee.first_name }} {% if employee.middle_name %}{{ employee.middle_name }} {% endif %}{{ employee.last_name }} | User Information</h2>
-    <p><strong>First Name:</strong> {{ employee.first_name }}</p>
-    <p><strong>Middle Name:</strong> {{ employee.middle_name }}</p>
-    <p><strong>Last Name:</strong> {{ employee.last_name }}</p>
-    <p><strong>Email:</strong> {{ employee.email }}</p>
-    <p><strong>Date Joined:</strong> {{ employee.joined_date }}</p>
+    <div class="category-header-2 shadow">
+        <div class="text-section">
+            <p class="welcome-text">
+                {{ employee.first_name }} {% if employee.middle_name %}{{ employee.middle_name }} {% endif %}{{ employee.last_name }}
+            </p>
+
+            <h1>
+                <b>User Information</b>
+            </h1>
+        </div>
+        <img src="/static/images/3d-7.png">
+    </div>
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-xl-5">
+                <div class="user-info">
+                    <div class="card-header" style="background-color: rgb(255 255 255 / 3%);">
+                        <span class="h5 font-weight-bold text-secondary">First Name</span>
+                    </div>
+                    <div class="card-body text-secondary">
+                        {{ employee.first_name }}
+                    </div>
+                </div>
+            </div>
     
-    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#editEmployeeModal">
-        Edit
-    </button>
+            <div class="col-xl-5">
+                <div class="user-info">
+                    <div class="card-header" style="background-color: rgb(255 255 255 / 3%);">
+                        <span class="h5 font-weight-bold text-secondary">Middle Name</span>
+                    </div>
+                    <div class="card-body text-secondary">
+                        {{ employee.middle_name }}
+                    </div>
+                </div>
+            </div>
+    
+            <div class="col-xl-5">
+                <div class="user-info">
+                    <div class="card-header" style="background-color: rgb(255 255 255 / 3%);">
+                        <span class="h5 font-weight-bold text-secondary">Last Name</span>
+                    </div>
+                    <div class="card-body text-secondary">
+                        {{ employee.last_name }}
+                    </div>
+                </div>
+            </div>
+    
+            <div class="col-xl-5">
+                <div class="user-info">
+                    <div class="card-header" style="background-color: rgb(255 255 255 / 3%);">
+                        <span class="h5 font-weight-bold text-secondary">Email</span>
+                    </div>
+                    <div class="card-body text-secondary">
+                        {{ employee.email }}
+                    </div>
+                </div>
+            </div>
+    
+            <div class="col-xl-5">
+                <div class="user-info">
+                    <div class="card-header" style="background-color: rgb(255 255 255 / 3%);">
+                        <span class="h5 font-weight-bold text-secondary">Date Joined</span>
+                    </div>
+                    <div class="card-body text-secondary">
+                        {{ employee.joined_date }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="modal fade" id="editEmployeeModal" tabindex="-1" role="dialog" aria-labelledby="editEmployeeModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editEmployeeModalLabel">Edit Employee Info</h5>
+                <div class="add-employee-modal modal-header">
+                    <h5 class="modal-title font-weight-bold text-white" id="editEmployeeModalLabel">
+                        <i class="fas fa-edit"></i> Edit User Information
+                    </h5>
+                    
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
+                        <span class="text-white" aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <div class="modal-body">
+                
+                <div class="modal-body m-2 px-5">
+                    <div class="d-flex justify-content-center mb-4">
+                        <img src="/static/images/3d-11.png" height="250">
+                    </div>
+
                     <form method="POST" action="{% url 'view_user_info' employee.id %}">
                         {% csrf_token %}
-                        {{ form.as_p }}
-                        <button type="submit" class="btn btn-primary">Save changes</button>
+                            <div class="form-group">
+                                <label class="font-weight-bold text-secondary" for="{{ form.first_name.id_for_label }}">First Name</label>
+                                {{ form.first_name }}
+                            </div>
+        
+                            <div class="form-group">
+                                <label class="font-weight-bold text-secondary" for="{{ form.middle_name.id_for_label }}">Middle Name</label>
+                                {{ form.middle_name }}
+                            </div>
+        
+                            <div class="form-group">
+                                <label class="font-weight-bold text-secondary" for="{{ form.last_name.id_for_label }}">Last Name</label>
+                                {{ form.last_name }}
+                            </div>
+        
+                            <div class="form-group">
+                                <label class="font-weight-bold text-secondary" for="{{ form.email.id_for_label }}">Email</label>
+                                {{ form.email }}
+                            </div>
+        
+                            <div class="form-group mb-4">
+                                <label class="font-weight-bold text-secondary" for="{{ form.joined_date.id_for_label }}">Join Date</label>
+                                {{ form.joined_date }}
+                            </div>
+                        <hr class="mt-4">
+                        
+                        <div class="mx-3 d-flex justify-content-center">
+                            <button type="submit" class="btn btn-primary"><i class='fas fa-save'></i> Save Changes</button>
+                        </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-    <a href="{% url 'admin_dashboard' %}" class="btn btn-primary">Back</a>
+
+    <div class="mx-3 mt-3 mb-3 d-flex justify-content-center">
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#editEmployeeModal">
+            <i class="fas fa-edit"></i> Edit
+        </button>
+        
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary mx-2"><i class="fas fa-caret-left"></i> Back</a>
+    </div>
+{% endblock %}
+
+{% block footer %}
+    <div>
+        <footer class="footer-custom text-white mt-auto">
+            <div class="footer-content-area text-center p-3">
+
+                <div class="footer-logos d-flex justify-content-center mt-2 mb-2">
+                    <img src="/static/images/ats.png" alt="ATS Logo" class="logo-img-ats mt-3 mx-2">
+                    <img src="/static/images/gc.png" alt="GC Logo" class="logo-img-gc mt-2 mx-2">
+                </div>
+
+                <div class="footer-copyright text-center text-dark p-3">
+                    © 2025 
+                    <a class="gc-link text-dark mb-2" href="https://gocloudgroup.com/">GOCLOUD Inc.</a>
+                </div>
+            </div>
+        </footer>
+    </div>
 {% endblock %}

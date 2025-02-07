@@ -13,12 +13,13 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.http import HttpResponseForbidden
 from reportlab.lib import colors
-from reportlab.platypus import Table, TableStyle
+from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, Paragraph
 from django.http import HttpResponse
 from datetime import datetime
 from django.templatetags.static import static
 from django.conf import settings
 import os
+import requests
 import pandas as pd
 from .forms import EmployeeCreationForm
 from .models import Employee
@@ -29,23 +30,43 @@ from django.utils import timezone
 from .forms import ChangePasswordForm, ResetPasswordEmailForm, ResetPasswordForm
 from .models import Employee
 from django.contrib.auth.hashers import check_password
-from .forms import TimeRecordForm
+from .forms import TimeRecordEditForm
+from .forms import TimeRecordCreationForm
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
 
 def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
     current_time = timezone.now().astimezone(philippines_tz)
     current_employee = None
+    error_message = None
 
+    # Check if user is already logged in
     if 'current_employee_id' in request.session:
         try:
             current_employee = Employee.objects.get(id=request.session['current_employee_id'])
         except Employee.DoesNotExist:
+            request.session.pop('current_employee_id', None)
             current_employee = None
 
     if request.method == 'POST':
-        if not current_employee:
+        if not current_employee:  # Login process
             username = request.POST.get('username')
             password = request.POST.get('password')
+            recaptcha_response = request.POST.get('g-recaptcha-response')
+
+            # Verify reCAPTCHA before login
+            recaptcha_verify = requests.post('https://www.google.com/recaptcha/api/siteverify', {
+                'secret': settings.RECAPTCHA_PRIVATE_KEY,
+                'response': recaptcha_response
+            }).json()
+
+            if not recaptcha_verify.get('success'):
+                return render(request, 'dashboard.html', {
+                    'error_message': 'Please complete the reCAPTCHA verification.',
+                    'employees': Employee.objects.all(),
+                    'current_datetime': current_time,
+                })
 
             if username and password:
                 try:
@@ -54,11 +75,12 @@ def dashboard(request):
                         current_employee = employee
                         request.session['current_employee_id'] = employee.id
                         return redirect('dashboard')
+                    else:
+                        error_message = 'Incorrect password. Please try again.'
                 except Employee.DoesNotExist:
-                    current_employee = None
-                    request.session.pop('current_employee_id', None)
+                    error_message = 'Username not found. Please check your credentials.'
 
-        if current_employee:
+        if current_employee:  # Handle clock-in, clock-out, and lunch toggle
             action = request.POST.get('action')
             if action:
                 today = current_time.date()
@@ -68,22 +90,36 @@ def dashboard(request):
                 ).order_by('-clock_in').first()
 
                 create_new_record = False
+
                 if action == 'clock_in':
                     if not latest_record or latest_record.clock_out:
                         create_new_record = True
-                    elif latest_record and not latest_record.clock_out:
-                        
-                        lunch_button_label = "Stop Lunch" if (latest_record.lunch_start and not latest_record.lunch_end) else "Start Lunch"
-                        
-                        return render(request, 'dashboard.html', {
-                            'error_message': 'You have already clocked in. Please clock out from your previous session first.',
-                            'employees': Employee.objects.all(),
-                            'current_employee': current_employee,
-                            'time_records': TimeRecord.objects.filter(employee=current_employee),
-                            'current_datetime': current_time,
-                            'status': 'Clocked In',
-                            'lunch_button_label': lunch_button_label
-                        })
+                    else:
+                        error_message = 'You have already clocked in. Please clock out from your previous session first.'
+                    
+                elif action == 'clock_out':
+                    if not latest_record or (latest_record and not latest_record.clock_in):
+                        error_message = 'Please clock in first.'  #"Awaiting Status" and tries to clock out.
+                    elif latest_record.clock_out:
+                        error_message = 'Please clock in first.'  #  locked out and tries to clock out again.
+                    elif latest_record.lunch_start and not latest_record.lunch_end:
+                        error_message = 'Please end your lunch break before clocking out.'
+                    else:
+                        latest_record.clock_out = current_time.time()
+                        latest_record.save()
+                
+                elif action == 'lunch_toggle' and latest_record:
+                    if not latest_record.clock_in or latest_record.clock_out:
+                        error_message = 'Please clock in before starting your lunch break.'
+                    elif not latest_record.lunch_start:
+                        latest_record.lunch_start = current_time.time()
+                        latest_record.lunch_end = None
+                        latest_record.save()
+                    elif not latest_record.lunch_end:
+                        latest_record.lunch_end = current_time.time()
+                        latest_record.save()
+                    else:
+                        error_message = 'You have already taken your lunch break for today.'
 
                 if create_new_record:
                     TimeRecord.objects.create(
@@ -91,25 +127,8 @@ def dashboard(request):
                         date=today,
                         clock_in=current_time.time()
                     )
-                elif action == 'clock_out' and latest_record:
-                    if not latest_record.clock_out:
-                        latest_record.clock_out = current_time.time()
-                        latest_record.save()
-                elif action == 'lunch_toggle' and latest_record:
-                    if not latest_record.lunch_start:
-                        latest_record.lunch_start = current_time.time()
-                        latest_record.lunch_end = None
-                    elif not latest_record.lunch_end:
-                        latest_record.lunch_end = current_time.time()
-                    latest_record.save()
 
-    if not current_employee and 'current_employee_id' in request.session:
-        try:
-            current_employee = Employee.objects.get(id=request.session['current_employee_id'])
-        except Employee.DoesNotExist:
-            current_employee = None
-
-
+    # Update user status
     status = "Awaiting Status"
     lunch_button_label = "Start Lunch"
     if current_employee:
@@ -127,18 +146,16 @@ def dashboard(request):
 
             if latest_record.lunch_start and not latest_record.lunch_end:
                 lunch_button_label = "Stop Lunch"
-            elif latest_record.lunch_start and latest_record.lunch_end:
-                lunch_button_label = "Start Lunch"
 
     return render(request, 'dashboard.html', {
         'employees': Employee.objects.all(),
         'current_employee': current_employee,
-        'time_records': TimeRecord.objects.filter(employee=current_employee).order_by('-date', '-clock_in') if current_employee else [],
+        'time_records': TimeRecord.objects.filter(employee=current_employee, date=today).order_by('-clock_in') if current_employee else [],
         'current_datetime': current_time,
         'status': status,
-        'lunch_button_label': lunch_button_label
+        'lunch_button_label': lunch_button_label,
+        'error_message': error_message
     })
-
 
 def format_time(time_value):
     if time_value:
@@ -186,32 +203,43 @@ def calculate_lunch_duration(record):
         return f"{minutes} minute{'s' if minutes != 1 else ''}"
     return "N/A"
 
+def overtime_duration(record):
+    if record.overtime_hours:
+        ht_duration = datetime.combine(record.date, record.overtime_hours)
+        if ht_duration > 0:
+            return ht_duration
+    else: 
+        return "N/A"
+
+def format_readable_date(date_str):
+    return datetime.strptime(date_str, "%Y-%m-%d").strftime("%B %d, %Y")
+
 def export_pdf(request, pk):
+    current_employee = Employee.objects.get(id=pk)
     response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="timerecords.pdf"'
+    response['Content-Disposition'] = f'attachment; filename="employee_{current_employee.username}_time_records.pdf"'
 
     page_width, page_height = letter
     margin = 36
     content_width = page_width - (2 * margin)
-    top_margin_for_table = 80
+    top_margin_for_table = 150  # Increased to accommodate new information
+    bottom_margin = margin + 80
+    right_margin = page_width - margin
+    available_height = page_height - top_margin_for_table - bottom_margin
+
 
     p = canvas.Canvas(response, pagesize=letter)
-
     try:
-        current_employee = Employee.objects.get(id=pk)
         full_name = f"{current_employee.first_name} {current_employee.last_name}"
-
-        # Get date range from request
         start_date = request.GET.get('datefrom')
         end_date = request.GET.get('dateto')
 
-        # Filter records based on date range
         if start_date and end_date:
             records = TimeRecord.objects.filter(employee=current_employee, date__range=[start_date, end_date]).order_by('date')
         else:
-            records = TimeRecord.objects.filter(employee=current_employee).order_by('date')  # Default: All records
+            records = TimeRecord.objects.filter(employee=current_employee).order_by('date')
 
-
+        # Logo and title drawing code
         icon_path = os.path.join(settings.BASE_DIR, 'TimeKeeping_App', 'static', 'images', 'icon-3.jpg')
         icon_x = margin
         icon_y = page_height - margin - 14
@@ -237,6 +265,7 @@ def export_pdf(request, pk):
         subtitle_y_position = page_height - margin - 25
         p.drawString((page_width - subtitle_width) / 2, subtitle_y_position, subtitle_text)
 
+        # Employee name
         p.setFont("Helvetica-Bold", 12)
         employee_name_label_text = "Employee Name:"
         employee_name_label_width = p.stringWidth(employee_name_label_text, "Helvetica-Bold", 12)
@@ -248,39 +277,81 @@ def export_pdf(request, pk):
         employee_name_y_position = employee_name_label_y_position - 20
         p.drawString((page_width - employee_name_width) / 2, employee_name_y_position, full_name)
 
-        # Add date range display
+        # Date range
+        date_range_y_position = employee_name_y_position - 25
         if start_date and end_date:
-            date_range_text = f"Date Range: {start_date} to {end_date}"
+            date_range_text = f"Date Range: {format_readable_date(start_date)} to {format_readable_date(end_date)}"
         else:
             date_range_text = "All Records"
         
         p.setFont("Helvetica", 11)
         date_range_width = p.stringWidth(date_range_text, "Helvetica", 11)
-        p.drawString((page_width - date_range_width) / 2, employee_name_y_position - 20, date_range_text)
+        p.drawString((page_width - date_range_width) / 2, date_range_y_position, date_range_text)
 
-
-        table_y_position = page_height - margin - top_margin_for_table
+        # Calculate total hours and overtime
+        total_minutes = 0
+        total_overtime_minutes = 0
         
-        data = [["Date", "Clock In", "Clock Out", "Total Hours"]]
         for record in records:
+            if record.clock_in and record.clock_out:
+                clock_in_dt = datetime.combine(record.date, record.clock_in)
+                clock_out_dt = datetime.combine(record.date, record.clock_out)
+                duration = clock_out_dt - clock_in_dt
+                
+                if record.lunch_start and record.lunch_end:
+                    lunch_start_dt = datetime.combine(record.date, record.lunch_start)
+                    lunch_end_dt = datetime.combine(record.date, record.lunch_end)
+                    lunch_duration = lunch_end_dt - lunch_start_dt
+                    duration = duration - lunch_duration
+                
+                total_minutes += duration.total_seconds() / 60
+
+            # Fix for Overtime Calculation
+            if record.overtime_hours:
+                overtime_str = str(record.overtime_hours).strip().lower()
+                
+                try:
+                    if "hour" in overtime_str or "minute" in overtime_str:
+                        hours = 0
+                        minutes = 0
+                        
+                        if "hour" in overtime_str:
+                            hours = int(overtime_str.split("hour")[0].strip())
+                        if "minute" in overtime_str:
+                            minutes = int(overtime_str.split("minute")[0].split()[-1].strip())
+                        
+                        total_overtime_minutes += (hours * 60) + minutes
+
+                    elif ":" in overtime_str:  # Handle "HH:MM" format
+                        hours, minutes = map(int, overtime_str.split(':'))
+                        total_overtime_minutes += (hours * 60) + minutes
+
+                except (ValueError, IndexError):
+                    print(f"Error parsing overtime for record {record.id}: {record.overtime_hours}")
+                    continue
+
+
+        # Table generation
+        table_y_position = page_height - top_margin_for_table
+        data = [["Date", "Clock In", "Clock Out", "Total Hours", "Overtime"]]
+        for record in records:
+            overtimeduration = record.overtime_hours if record.overtime_hours else "N/A"
             data.append([
                 format_date(record.date),
                 format_time(record.clock_in),
                 format_time(record.clock_out),
-                calculate_duration(record)
+                calculate_duration(record),
+                overtimeduration
             ])
         
-        available_height = table_y_position - (margin + 20)
-        rows_per_page = int(available_height / 20)
-
-        # Calculate column width so they are equally spaced
-        num_columns = len(data[0])  # 5 columns
-        column_width = content_width / num_columns  # Evenly divide available width
+        rows_per_page = 25
+        num_columns = len(data[0])
+        column_width = content_width / num_columns
         
         start_row = 1
         while start_row < len(data):
             table_chunk = [data[0]] + data[start_row:start_row + rows_per_page]
-            table = Table(table_chunk, colWidths=[column_width] * num_columns)  
+            table = Table(table_chunk, colWidths=[column_width] * num_columns)
             table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -289,21 +360,59 @@ def export_pdf(request, pk):
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
                 ('TOPPADDING', (0, 0), (-1, -1), 4),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-                ('LEFTPADDING', (0, 0), (-1, -1), 2),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 2),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
             ]))
-            
+
             table.wrapOn(p, content_width, available_height)
             table.drawOn(p, margin, table_y_position - (len(table_chunk) * 20))
-            
+
             start_row += rows_per_page
             if start_row < len(data):
                 p.showPage()
-                table_y_position = page_height - margin - top_margin_for_table
-        
-        signature_y = margin + 70
+                p.setFont("Helvetica", 11)
+                
+                # Reset position to avoid extra spacing
+                table_y_position = page_height - margin  # Adjust this value
+
+        # Format total hours
+        total_hours = int(total_minutes // 60)
+        remaining_minutes = int(total_minutes % 60)
+        total_hours_text = f"{total_hours} hour{'s' if total_hours != 1 else ''} {remaining_minutes} minute{'s' if remaining_minutes != 1 else ''}"
+
+        # Format overtime hours
+        overtime_hours = int(total_overtime_minutes // 60)
+        overtime_minutes = int(total_overtime_minutes % 60)
+        total_overtime_text = f"{overtime_hours} hour{'s' if overtime_hours != 1 else ''} {overtime_minutes} minute{'s' if overtime_minutes != 1 else ''}"
+
+        table_bottom_y = table_y_position - (len(table_chunk) * 20)  # Adjusting space below table
+        # Draw total hours and overtime below the table
+        total_hours_y = table_bottom_y - 20
+        overtime_y = total_hours_y - 20
+
+        p.setFont("Helvetica-Bold", 11)
+        total_hours_label = "Overall Total Hours:"
+        total_overtime_label = "Overall Overtime Hours:"
+
+        # Compute text width to center align
+        total_hours_label_width = p.stringWidth(total_hours_label, "Helvetica-Bold", 11)
+        total_overtime_label_width = p.stringWidth(total_overtime_label, "Helvetica-Bold", 11)
+
+        total_hours_text_width = p.stringWidth(total_hours_text, "Helvetica", 11)
+        total_overtime_text_width = p.stringWidth(total_overtime_text, "Helvetica", 11)
+
+        # Calculate centered x-position
+        total_hours_x = right_margin - total_hours_label_width - total_hours_text_width - 10
+        total_overtime_x = right_margin - total_overtime_label_width - total_overtime_text_width - 10
+
+
+        p.drawString(total_hours_x, total_hours_y, total_hours_label)
+        p.drawString(total_overtime_x, overtime_y, total_overtime_label)
+
+        p.setFont("Helvetica", 11)
+        p.drawString(total_hours_x + total_hours_label_width + 10, total_hours_y, total_hours_text)
+        p.drawString(total_overtime_x + total_overtime_label_width + 10, overtime_y, total_overtime_text)
+            
+        # Signatures
+        signature_y = margin + 20
         center_x = page_width / 2
         line_width = 200
         employee_signature_x = center_x - (line_width + 40)
@@ -311,23 +420,15 @@ def export_pdf(request, pk):
 
         p.line(employee_signature_x, signature_y, employee_signature_x + line_width, signature_y)
         p.line(supervisor_signature_x, signature_y, supervisor_signature_x + line_width, signature_y)
-
-        employee_text_width = p.stringWidth("Signature of Employee", "Helvetica", 10)
-        supervisor_text_width = p.stringWidth("Signature of Supervisor", "Helvetica", 10)
-
-        employee_text_x = employee_signature_x + (line_width - employee_text_width) / 2.5
-        supervisor_text_x = supervisor_signature_x + (line_width - supervisor_text_width) / 2.5
-
-        p.drawString(employee_text_x, signature_y - 12, "Signature of Employee")
-        p.drawString(supervisor_text_x, signature_y - 12, "Signature of Supervisor")
+        
+        p.drawString(employee_signature_x + 60, signature_y - 12, "Signature of Employee")
+        p.drawString(supervisor_signature_x + 60, signature_y - 12, "Signature of Supervisor")
         
         p.save()
     except Employee.DoesNotExist:
-        p.drawString(margin, page_height - margin, "No records were found.")
-        p.save()
+        return HttpResponse("Employee not found", content_type="text/plain", status=404)
 
     return response
-
 
 def logout_view(request):
     request.session.pop('current_employee_id', None)  
@@ -340,19 +441,29 @@ def admin_dashboard(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            return redirect('admin_dashboard')
+        recaptcha_response = request.POST.get('g-recaptcha-response')
+
+        # Verify reCAPTCHA
+        recaptcha_verify = requests.post('https://www.google.com/recaptcha/api/siteverify', {
+            'secret': settings.RECAPTCHA_PRIVATE_KEY,
+            'response': recaptcha_response
+        }).json()
+
+        if not recaptcha_verify.get('success'):
+            error_message = "Please complete the reCAPTCHA verification."
         else:
-            error_message = "Invalid username or password."
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                login(request, user)
+                return redirect('admin_dashboard')
+            else:
+                error_message = "Invalid username or password."
 
     return render(request, 'admin_dashboard.html', {
         'employees': employees, 
         'is_authenticated': request.user.is_authenticated,
-        'error_message': error_message,
+        'error_message': error_message,  # Always pass error_message
     })
-
 
 class EmployeeRecord(UserPassesTestMixin, View):
     def test_func(self):
@@ -367,6 +478,8 @@ class EmployeeRecord(UserPassesTestMixin, View):
         datefrom = request.GET.get('datefrom')
         dateto = request.GET.get('dateto')
 
+        time_records = TimeRecord.objects.filter(employee=employee, is_deleted=False)
+
         if datefrom and dateto:
             time_records = TimeRecord.objects.filter(employee=employee, date__gte=datefrom, date__lte=dateto)
         else:
@@ -378,10 +491,9 @@ class EmployeeRecord(UserPassesTestMixin, View):
             "is_authenticated": request.user.is_authenticated,
             "time_records": time_records
         })
-
-    
+        
 def logout_admin(request):
-    request.session.flush()  
+    logout(request)  
     return redirect('admin_dashboard')
 
 def export_excel(request, pk):
@@ -396,15 +508,62 @@ def export_excel(request, pk):
         records = TimeRecord.objects.filter(employee=employee).order_by('date')  # Default: All records sorted by date
 
     data = []
+    total_minutes = 0
+    total_overtime_minutes = 0
+
     for record in records:
+        overtime_hours = record.overtime_hours if record.overtime_hours else "N/A"
+        
+        if record.overtime_hours:
+            overtime_str = str(record.overtime_hours).strip().lower()
+            try:
+                if "hour" in overtime_str or "minute" in overtime_str:
+                    hours = 0
+                    minutes = 0
+                    if "hour" in overtime_str:
+                        hours = int(overtime_str.split("hour")[0].strip())
+                    if "minute" in overtime_str:
+                        minutes = int(overtime_str.split("minute")[0].split()[-1].strip())
+                    total_overtime_minutes += (hours * 60) + minutes
+
+                elif ":" in overtime_str:  # Handle "HH:MM" format
+                    hours, minutes = map(int, overtime_str.split(':'))
+                    total_overtime_minutes += (hours * 60) + minutes
+
+            except (ValueError, IndexError):
+                print(f"Error parsing overtime for record {record.id}: {record.overtime_hours}")
+                overtime_hours = "N/A"  # fallback to "N/A"
+        
+        if record.clock_in and record.clock_out:
+            clock_in_dt = datetime.combine(record.date, record.clock_in)
+            clock_out_dt = datetime.combine(record.date, record.clock_out)
+            duration = clock_out_dt - clock_in_dt
+            
+            if record.lunch_start and record.lunch_end:
+                lunch_start_dt = datetime.combine(record.date, record.lunch_start)
+                lunch_end_dt = datetime.combine(record.date, record.lunch_end)
+                lunch_duration = lunch_end_dt - lunch_start_dt
+                duration = duration - lunch_duration
+            
+            total_minutes += duration.total_seconds() / 60
+
         data.append({
             'Date': record.date,
             'Clock In': format_time(record.clock_in),
             'Clock Out': format_time(record.clock_out),
             'Lunch Break Hours': calculate_lunch_duration(record),
-            'Total Hours': calculate_duration(record)
+            'Total Hours': calculate_duration(record),
+            'Overtime Hours': overtime_hours
         })
     
+    total_hours = int(total_minutes // 60)
+    remaining_minutes = int(total_minutes % 60)
+    total_hours_text = f"{total_hours} hour{'s' if total_hours != 1 else ''} {remaining_minutes} minute{'s' if remaining_minutes != 1 else ''}"
+
+    total_overtime_hours = total_overtime_minutes // 60
+    total_overtime_remaining_minutes = total_overtime_minutes % 60
+    total_overtime_text = f"{total_overtime_hours} hour{'s' if total_overtime_hours != 1 else ''} {total_overtime_remaining_minutes} minute{'s' if total_overtime_remaining_minutes != 1 else ''}"
+
     df = pd.DataFrame(data)
 
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -412,43 +571,95 @@ def export_excel(request, pk):
 
     with pd.ExcelWriter(response, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Time Records')
-    
+
+        workbook = writer.book
+        worksheet = writer.sheets['Time Records']
+        worksheet.append(['', '', '', '', 'Overall Total Hours', 'Overall Total Overtime'])
+        worksheet.append(['', '', '', '', total_hours_text, total_overtime_text])
+
     return response
 
+
+@login_required(login_url='admin_dashboard')
 def create_employee(request):
     if request.method == "POST":
         form = EmployeeCreationForm(request.POST)
         if form.is_valid():
-            form.save()
-            return redirect("admin_dashboard")  
+            email = form.cleaned_data.get('email')
+            # Check for existing non-deleted email before saving
+            if Employee.objects.filter(email=email, is_deleted=False).exists():
+                form.add_error('email', 'This email is already registered to an inaactive account.')
+            else:
+                try:
+                    # Set is_deleted=False explicitly when creating
+                    employee = form.save(commit=False)
+                    employee.is_deleted = False
+                    employee.save()
+                    messages.success(request, "Employee created successfully!")
+                    return redirect("admin_dashboard")
+                except Exception as e:
+                    form.add_error('email', 'This email is already registered to an inactive account.')
+
+        messages.error(request, "Failed to create employee. Please fix the errors in the form.")
     else:
         form = EmployeeCreationForm()
 
-    employees = Employee.objects.all()
-    return render(request, "admin_dashboard.html", {"form": form, "employees": employees})
+    employees = Employee.objects.filter(is_deleted=False)
+    return render(request, "admin_dashboard.html", {
+        "form": form,
+        "employees": employees,
+        "is_authenticated": request.user.is_authenticated 
+    })
 
+
+def create_timerecord(request, pk):
+    employee = get_object_or_404(Employee, id=pk)  
+
+    if request.method == "POST":
+        form = TimeRecordCreationForm(request.POST)
+        if form.is_valid():
+            time_record = form.save(commit=False)  
+            time_record.employee = employee  
+            time_record.save()  
+            messages.success(request, "Time record created successfully!")
+            return redirect("view_records", pk=employee.id)  
+    else:
+        form = TimeRecordCreationForm()
+
+    return render(request, "create_timerecord.html", {"form": form, "employee": employee})
 
 def view_user_info(request, employee_id):
     if not request.user.is_authenticated or not request.user.is_superuser:
         return HttpResponseForbidden("You do not have permission to access this page.")
 
     employee = get_object_or_404(Employee, id=employee_id)
+    show_modal = False 
 
     if request.method == 'POST':
         form = EmployeeCreationForm(request.POST, instance=employee)
         if form.is_valid():
-            form.save() 
-            return redirect('view_user_info', employee_id=employee.id)  
+            form.save()
+            messages.success(request, "Employee details updated successfully!")
+            return redirect('view_user_info', employee_id=employee.id)
+        else:
+            messages.error(request, "Failed to update employee. Please fix the errors in the form.")
+            show_modal = True
+            employee.refresh_from_db()
     else:
-        form = EmployeeCreationForm(instance=employee)  
-    return render(request, 'view_user_info.html', {'employee': employee, 'form': form})
+        form = EmployeeCreationForm(instance=employee)
 
-def delete_employee(request, employee_id):
-    employee = get_object_or_404(Employee, id=employee_id)
+    return render(request, 'view_user_info.html', {
+        'employee': employee,
+        'form': form,
+        'show_modal': show_modal
+    })
+
+#def delete_employee(request, employee_id):
+#    employee = get_object_or_404(Employee, id=employee_id)
     
-    employee.delete()
+#    employee.delete()
 
-    return redirect('admin_dashboard') 
+#    return redirect('admin_dashboard') 
 
 
 
@@ -490,7 +701,8 @@ def change_password(request):
 
     return render(request, 'change_password.html', {
         'form': form,
-        'error_message': error_message
+        'error_message': error_message,
+        'current_employee': employee
     })
 
 def forgot_password(request):
@@ -588,11 +800,24 @@ def edit_time_record(request, pk):
     record = get_object_or_404(TimeRecord, pk=pk)
     
     if request.method == "POST":
-        form = TimeRecordForm(request.POST, instance=record)
+        form = TimeRecordEditForm(request.POST, instance=record)
         if form.is_valid():
             form.save()
             return redirect('view_records', pk=record.employee.id) 
     else:
-        form = TimeRecordForm(instance=record)
+        form = TimeRecordEditForm(instance=record)
 
     return render(request, 'edit_time_record.html', {'form': form, 'record': record})
+
+def delete_time_record(request, pk):
+    record = get_object_or_404(TimeRecord, pk=pk)
+    record.soft_delete()
+    messages.success(request, "Time record deleted successfully.")
+    return redirect('view_records', pk=record.employee.id)
+
+
+def delete_employee(request, pk):
+    record = get_object_or_404(Employee, pk=pk)
+    record.soft_delete()
+    messages.success(request, "Employee record deleted successfully.")
+    return redirect('admin_dashboard')
