@@ -96,14 +96,18 @@ def dashboard(request):
                         create_new_record = True
                     else:
                         error_message = 'You have already clocked in. Please clock out from your previous session first.'
-
-                elif action == 'clock_out' and latest_record:
-                    if latest_record.lunch_start and not latest_record.lunch_end:
+                    
+                elif action == 'clock_out':
+                    if not latest_record or (latest_record and not latest_record.clock_in):
+                        error_message = 'Please clock in first.'  #"Awaiting Status" and tries to clock out.
+                    elif latest_record.clock_out:
+                        error_message = 'Please clock in first.'  #  locked out and tries to clock out again.
+                    elif latest_record.lunch_start and not latest_record.lunch_end:
                         error_message = 'Please end your lunch break before clocking out.'
-                    elif not latest_record.clock_out:
+                    else:
                         latest_record.clock_out = current_time.time()
                         latest_record.save()
-
+                
                 elif action == 'lunch_toggle' and latest_record:
                     if not latest_record.clock_in or latest_record.clock_out:
                         error_message = 'Please clock in before starting your lunch break.'
