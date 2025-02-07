@@ -96,14 +96,18 @@ def dashboard(request):
                         create_new_record = True
                     else:
                         error_message = 'You have already clocked in. Please clock out from your previous session first.'
-
-                elif action == 'clock_out' and latest_record:
-                    if latest_record.lunch_start and not latest_record.lunch_end:
+                    
+                elif action == 'clock_out':
+                    if not latest_record or (latest_record and not latest_record.clock_in):
+                        error_message = 'Please clock in first.'  #"Awaiting Status" and tries to clock out.
+                    elif latest_record.clock_out:
+                        error_message = 'Please clock in first.'  #  locked out and tries to clock out again.
+                    elif latest_record.lunch_start and not latest_record.lunch_end:
                         error_message = 'Please end your lunch break before clocking out.'
-                    elif not latest_record.clock_out:
+                    else:
                         latest_record.clock_out = current_time.time()
                         latest_record.save()
-
+                
                 elif action == 'lunch_toggle' and latest_record:
                     if not latest_record.clock_in or latest_record.clock_out:
                         error_message = 'Please clock in before starting your lunch break.'
@@ -219,7 +223,7 @@ def export_pdf(request, pk):
     margin = 36
     content_width = page_width - (2 * margin)
     top_margin_for_table = 150  # Increased to accommodate new information
-    bottom_margin = margin + 80 
+    bottom_margin = margin + 80
     right_margin = page_width - margin
     available_height = page_height - top_margin_for_table - bottom_margin
 
@@ -504,15 +508,62 @@ def export_excel(request, pk):
         records = TimeRecord.objects.filter(employee=employee).order_by('date')  # Default: All records sorted by date
 
     data = []
+    total_minutes = 0
+    total_overtime_minutes = 0
+
     for record in records:
+        overtime_hours = record.overtime_hours if record.overtime_hours else "N/A"
+        
+        if record.overtime_hours:
+            overtime_str = str(record.overtime_hours).strip().lower()
+            try:
+                if "hour" in overtime_str or "minute" in overtime_str:
+                    hours = 0
+                    minutes = 0
+                    if "hour" in overtime_str:
+                        hours = int(overtime_str.split("hour")[0].strip())
+                    if "minute" in overtime_str:
+                        minutes = int(overtime_str.split("minute")[0].split()[-1].strip())
+                    total_overtime_minutes += (hours * 60) + minutes
+
+                elif ":" in overtime_str:  # Handle "HH:MM" format
+                    hours, minutes = map(int, overtime_str.split(':'))
+                    total_overtime_minutes += (hours * 60) + minutes
+
+            except (ValueError, IndexError):
+                print(f"Error parsing overtime for record {record.id}: {record.overtime_hours}")
+                overtime_hours = "N/A"  # fallback to "N/A"
+        
+        if record.clock_in and record.clock_out:
+            clock_in_dt = datetime.combine(record.date, record.clock_in)
+            clock_out_dt = datetime.combine(record.date, record.clock_out)
+            duration = clock_out_dt - clock_in_dt
+            
+            if record.lunch_start and record.lunch_end:
+                lunch_start_dt = datetime.combine(record.date, record.lunch_start)
+                lunch_end_dt = datetime.combine(record.date, record.lunch_end)
+                lunch_duration = lunch_end_dt - lunch_start_dt
+                duration = duration - lunch_duration
+            
+            total_minutes += duration.total_seconds() / 60
+
         data.append({
             'Date': record.date,
             'Clock In': format_time(record.clock_in),
             'Clock Out': format_time(record.clock_out),
             'Lunch Break Hours': calculate_lunch_duration(record),
-            'Total Hours': calculate_duration(record)
+            'Total Hours': calculate_duration(record),
+            'Overtime Hours': overtime_hours
         })
     
+    total_hours = int(total_minutes // 60)
+    remaining_minutes = int(total_minutes % 60)
+    total_hours_text = f"{total_hours} hour{'s' if total_hours != 1 else ''} {remaining_minutes} minute{'s' if remaining_minutes != 1 else ''}"
+
+    total_overtime_hours = total_overtime_minutes // 60
+    total_overtime_remaining_minutes = total_overtime_minutes % 60
+    total_overtime_text = f"{total_overtime_hours} hour{'s' if total_overtime_hours != 1 else ''} {total_overtime_remaining_minutes} minute{'s' if total_overtime_remaining_minutes != 1 else ''}"
+
     df = pd.DataFrame(data)
 
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -520,8 +571,14 @@ def export_excel(request, pk):
 
     with pd.ExcelWriter(response, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Time Records')
-    
+
+        workbook = writer.book
+        worksheet = writer.sheets['Time Records']
+        worksheet.append(['', '', '', '', 'Overall Total Hours', 'Overall Total Overtime'])
+        worksheet.append(['', '', '', '', total_hours_text, total_overtime_text])
+
     return response
+
 
 @login_required(login_url='admin_dashboard')
 def create_employee(request):
@@ -644,7 +701,8 @@ def change_password(request):
 
     return render(request, 'change_password.html', {
         'form': form,
-        'error_message': error_message
+        'error_message': error_message,
+        'current_employee': employee
     })
 
 def forgot_password(request):

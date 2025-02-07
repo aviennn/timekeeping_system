@@ -216,19 +216,33 @@
             </div>
         {% endif %}
 
-        <p>You are not logged in. Please log in.</p>
-        <form method="post" action="{% url 'admin_dashboard' %}">
-            {% csrf_token %}
-            <label for="username">Username:</label>
-            <input type="text" id="username" name="username" required>
-            <label for="password">Password:</label>
-            <input type="password" id="password" name="password" required>
+        <div class="container">
+            <div class="col-md-6 offset-md-3">
+                <h2 class="text-center text-dark mt-5">Admin</h2>
+                <div class="text-center mb-3 text-dark">Please log in to continue.</div>
 
-            <!-- Add reCAPTCHA -->
-            <div class="g-recaptcha" data-sitekey="6LfU480qAAAAAOP544VCY6VRhtcax-nJEO_ct9p3" style="margin-bottom: 5px;"></div>
+                   
+                    <form class="card-body cardbody-color p-lg-5" method="post" action="{% url 'admin_dashboard' %}">
+                        {% csrf_token %}
+                        <div class="input-group mb-3 login-username-container">
+                            <input type="text" class="form-control" name="username" placeholder="Enter Username" required>
+                        </div>
+                        <div class="input-group mb-3 login-password-container">
+                            <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
+                            <div class="input-group-append login-eye-icon">
+                                <i id="eye-icon" class="fas fa-eye-slash toggle-password" onclick="togglePassword()"></i>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <a href="{% url 'forgot_password' %}" class="forgot-password">Forgot Password?</a>
+                        </div>
+                        <div class="g-recaptcha" data-sitekey="6LfU480qAAAAAOP544VCY6VRhtcax-nJEO_ct9p3"></div>
+                        <button type="submit" class="btn btn-primary btn-block login-button">Login</button>
+                    </form>
+                </div>
+            </div>
+        </div>
 
-            <button type="submit">Login</button>
-        </form>
 {% endif %}
 
 {% endblock %}

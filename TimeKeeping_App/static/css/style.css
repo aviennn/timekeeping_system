@@ -499,3 +499,193 @@ html, body {
         font-size: 1rem !important;
     }
 }
+
+
+.loginp-container {
+    max-width: 1200px;
+    margin: auto;
+    padding: 0;
+    height: 95vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+
+.row.no-gutters {
+    margin-right: 0;
+    margin-left: 0;
+}
+
+
+.login-container, .design-container {
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow:
+    2px 2px 4px rgba(0,0,0,0.1),
+    -2px 2px 4px rgba(0,0,0,0.1),
+    2px -2px 4px rgba(0,0,0,0.1),
+    -2px -2px 4px rgba(0,0,0,0.1) !important;
+
+
+}
+
+.g-recaptcha {
+    margin-top: 10px;
+    justify-content: center;
+    display: flex;
+}
+
+.forgot-password {
+    margin-top: -10px;
+    color: #3e8de2;
+}
+
+
+.login-container {
+    background: #FFFFFF;
+    border-radius: 10px 0 0 10px;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 30px !important;
+}
+
+
+.design-container {
+    background: linear-gradient(to right, #4f8bd9, #51aae5);
+    color: white;
+    border-radius: 0 10px 10px 0;
+    padding: 40px;
+}
+
+
+.gocloud-logo { 
+    width: auto;
+    height: 50px;
+    display: block;
+    margin-bottom: 60px;
+}
+
+
+.welcome-back {
+    font-size: 24px;
+    color: #333;
+    font-weight: bold;
+}
+
+
+.design-text {
+    font-size: 28px;
+    opacity: 0.6;
+    text-align: center;
+    font-weight: bold;
+}
+
+
+.timekeeping-icon {
+    max-width: 80%;
+    height: auto;
+    margin-top: 20px;
+}
+
+
+
+.login-username-container .form-control,
+.login-password-container .form-control {
+    flex: 1;
+    border: 1px solid #ccc; 
+    border-radius: 25px; 
+    padding: 10px 15px; 
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); 
+    transition: box-shadow 0.3s ease-in-out; 
+}
+
+.login-username-container .form-control:focus,
+.login-password-container .form-control:focus {
+    box-shadow: inset 0 4px 6px rgba(0,0,0,0.2); 
+    outline: none; 
+}
+
+
+
+.login-eye-icon {
+    display: absolute;
+    align-items: center;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 0 25px 25px 0;
+    padding: 0 15px;
+    cursor: pointer;
+    transition: 0.3s ease-in-out;
+    
+}
+
+
+.login-button {
+    background-color: #0056b3;
+    border-color: #004085;
+    color: #fff;
+    border-radius: 20px;
+    padding: 10px 20px;
+    width: 100%;
+    margin-top: 20px;
+}
+
+
+@media (max-width: 768px) {
+    .container, .row, .col-md-6 {
+        padding: 15px;
+        flex-direction: column;
+    }
+
+
+    .login-container, .design-container {
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+
+
+    .design-container {
+        display: none;
+    }
+
+
+    .input-group .form-control, .btn-primary {
+        border-radius: 15px;
+    }
+}
+
+
+
+.login-username-container .form-control {
+    flex: 1;
+    border: 1px solid #ccc;
+    border-radius: 25px;
+}
+
+
+  
+
+.card-body.cardbody-color {
+    padding: 20px; 
+    border-radius: 20px; 
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); 
+    background-color: #343a40; 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center; 
+}
+
+
+.p-lg-5 {
+    padding: 3rem !important; 
+}
+
+  
+  a{
+    text-decoration: none;
+  }

@@ -9,114 +9,80 @@
 {% endblock %}
 
 {% block nav %}
-    <nav class="navbar navbar-dark navbar-expand-lg navbar-custom">
-        <div class="container-fluid">
-            <div class="nav-logo navbar-brand">
-                <img src="/static/images/icon-1.png" width="42" height="30" class="align-top">
-                <span class="h3">Academe TS</span>
-            </div>
+    {% if current_employee %}
+        <nav class="navbar navbar-dark navbar-expand-lg navbar-custom">
+            <div class="container-fluid">
+                <div class="nav-logo navbar-brand">
+                    <img src="/static/images/icon-1.png" width="42" height="30" class="align-top">
+                    <span class="h3">Academe TS</span>
+                </div>
 
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
 
-            <div class="collapse navbar-collapse" id="navbarNavDropdown">
-                <ul class="navbar-nav ms-auto ml-auto">
-                    {% if current_employee %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            {{ current_employee.username }}
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
-                            <a class="dropdown-item" href="{% url 'change_password' %}">
-                                <span class="text-secondary"><i class="fas fa-key"></i> | Change Password</span>
+                <div class="collapse navbar-collapse" id="navbarNavDropdown">
+                    <ul class="navbar-nav ms-auto ml-auto">
+                        {% if current_employee %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                {{ current_employee.username }}
                             </a>
-                            <a class="dropdown-item" href="{% url 'logout' %}">
-                                <span class="text-secondary"><i class="fas fa-sign-out-alt"></i> | Log Out</span>
-                            </a>
-                        </div>
-                    </li>
-                    {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="/"> <i class="fas fa-sign-in-alt"></i> | Log In</a>
-                    </li>
-                    {% endif %}
-                </ul>
+                            <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
+                                <a class="dropdown-item" href="{% url 'change_password' %}">
+                                    <span class="text-secondary"><i class="fas fa-key"></i> | Change Password</span>
+                                </a>
+                                <a class="dropdown-item" href="{% url 'logout' %}">
+                                    <span class="text-secondary"><i class="fas fa-sign-out-alt"></i> | Log Out</span>
+                                </a>
+                            </div>
+                        </li>
+                        {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="/"> <i class="fas fa-sign-in-alt"></i> | Log In</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
             </div>
-        </div>
-    </nav>
+        </nav>
+    {% endif %}
 {% endblock %}
 
 {% block content %}
     {% if current_employee %}
-    <div class="category-header">
-        <div class="text-section">
-            <p class="welcome-text">Welcome, <b>{{ current_employee.username }}!</b></p>
-            <h1><b>Timekeeping</b></h1>
-        </div>
-        <img src="/static/images/3d-1.png" alt="Employee Icon">
-    </div>
-    {% else %}
-    <div class="category-header">
-        <div class="text-section">
-            <h1><b>Timekeeping</b></h1>
-        </div>
-        <img src="/static/images/3d-1.png" alt="Employee Icon">
-    </div>
-    {% endif %}
-
-    <div class="d-flex justify-content-center">
-        <div id="clock" class="clock shadow">
-            <h1 style="margin-bottom: -6px;"><i class='far fa-clock'></i></h1>
-            <div id="time" class="time" style="margin-bottom: -15px;"></div>
-            <div id="date" class="date" style="margin-bottom: 0.1px;"></div>
-        </div>
-    </div>
-
-    {% if error_message %}
-    <div class="alert alert-warning error-message text-center mt-3">
-        <i class="fas fa-exclamation-triangle"></i> {{ error_message }}
-    </div>    
-    {% endif %}
-
-    {% if messages %}
-    <div class="messages">
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}" role="alert">
-            {{ message }}
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    {% if not current_employee %}
-    <form method="post">
-        {% csrf_token %}
-        <div class="form-group">
-            <input class="form-control" type="text" name="username" placeholder="Enter Username" required>
-            <div class="password-container">
-                <div class="input-group">
-                    <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
-                    <div class="input-group-append">
-                        <span class="input-group-text bg-white">
-                            <i id="eye-icon" class="fas fa-eye" onclick="togglePassword()" style="cursor: pointer;"></i>
-                        </span>
-                    </div>
-                </div>
+        <div class="category-header">
+            <div class="text-section">
+                <p class="welcome-text">Welcome, <b>{{ current_employee.username }}!</b></p>
+                <h1><b>Timekeeping</b></h1>
             </div>
-            <!-- Add reCAPTCHA -->
-            <div class="g-recaptcha" data-sitekey="6LfU480qAAAAAOP544VCY6VRhtcax-nJEO_ct9p3" style="margin-top: 10px;"></div>
-            
-            <div class="d-flex justify-content-between align-items-center mt-2">
-                <a href="{% url 'forgot_password' %}" class="text-primary">Forgot Password?</a>
-            </div>
-            <button class="btn btn-primary mt-3" type="submit">Login</button>
+            <img src="/static/images/3d-1.png" alt="Employee Icon">
         </div>
-    </form>
-    {% endif %}
-    
-        {% if current_employee %}
-        <div>
+        
+        <div class="d-flex justify-content-center">
+            <div id="clock" class="clock shadow">
+                <h1 style="margin-bottom: -6px;"><i class='far fa-clock'></i></h1>
+                <div id="time" class="time" style="margin-bottom: -15px;"></div>
+                <div id="date" class="date" style="margin-bottom: 0.1px;"></div>
+            </div>
+        </div>
+
+        {% if error_message %}
+        <div class="alert alert-warning error-message text-center mt-3">
+            <i class="fas fa-exclamation-triangle"></i> {{ error_message }}
+        </div>    
+        {% endif %}
+
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
             <div class="mt-5 mb-4 text-center {% if status == 'Clocked In' %}status-active{% elif status == 'Clocked Out' %}status-inactive{% else %}status-pending{% endif %}">
                 <span class="status-text-area-1 h5 py-3 px-2">
                     <span class="status-icon text-secondary"><i class="fas fa-info-circle"></i></span> <span class="py-2 px-3 status-text text-secondary">{{ status }}</span>
@@ -137,7 +103,7 @@
                 {% csrf_token %}
                 <input type="hidden" name="employee" value="{{ current_employee.id }}">
                 <input type="hidden" name="password" value="{{ current_employee.password }}">
-        
+
                 <div class="d-flex flex-column flex-md-row gap-2">
                     <button class="btn btn-lg btn-success px-4 pt-3 pb-2 m-1 flex-fill tall-btn success-custom" name="action" value="clock_in">
                         <span class="h4">
@@ -158,45 +124,79 @@
                     </button>
                 </div>
             </form>
-        </div>
-        
-    <div class="card shadow mb-4">
-        <div class="card-header bg-secondary py-3">
-            <h5 class="m-0 font-weight-bold text-light text-center">Time-in/Time-out Record</h5>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-striped table-bordered" id="dataTable" width="100%">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <!-- <th>Employee</th> -->
-                            <th>Clock In</th>
-                            <th>Clock Out</th>
-                            <th>Lunch Break Hours</th>
-                            <th>Total Hours</th>
-                            <th>Overtime Hours</th>
-                        </tr>
-                    </thead>
+            
+        <div class="card shadow mb-4">
+            <div class="card-header bg-secondary py-3">
+                <h5 class="m-0 font-weight-bold text-light text-center">Time-in/Time-out Record</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered" id="dataTable" width="100%">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <!-- <th>Employee</th> -->
+                                <th>Clock In</th>
+                                <th>Clock Out</th>
+                                <th>Lunch Break Hours</th>
+                                <th>Total Hours</th>
+                                <th>Overtime Hours</th>
+                            </tr>
+                        </thead>
 
-                    <tbody>
-                        {% for record in time_records %}
-                        <tr>
-                            <td>{{ record.date }}</td>
-                            <!-- <td>{{ record.employee.username }}</td> -->
-                            <td>{{ record.clock_in|time:"g:i A"|default:"None" }}</td>
-                            <td>{{ record.clock_out|time:"g:i A"|default:"None" }}</td>
-                            <td>{{ record.lunch_break_duration|default:"None" }}</td>
-                            <td>{{ record.total_hours|default:"None" }}</td>
-                            <td>{{ record.overtime_hours|default:"None" }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                        <tbody>
+                            {% for record in time_records %}
+                            <tr>
+                                <td>{{ record.date }}</td>
+                                <!-- <td>{{ record.employee.username }}</td> -->
+                                <td>{{ record.clock_in|time:"g:i A"|default:"None" }}</td>
+                                <td>{{ record.clock_out|time:"g:i A"|default:"None" }}</td>
+                                <td>{{ record.lunch_break_duration|default:"None" }}</td>
+                                <td>{{ record.total_hours|default:"None" }}</td>
+                                <td>{{ record.overtime_hours|default:"None" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-    </div>
-       
-
+    {% else %}
+    {% if error_message %}
+    <div class="alert alert-warning error-message text-center mt-3">
+        <i class="fas fa-exclamation-triangle"></i> {{ error_message }}
+    </div>    
+    {% endif %}
+        <div class="loginp-container">
+            <div class="row justify-content-center align-items-stretch no-gutters">
+                <div class="col-md-6 login-container">
+                    <img src="/static/images/gocloud.png" alt="GoCloud Logo" class="gocloud-logo">
+                    <h2 class="welcome-back">Welcome back!</h2>
+                    <p>Please log in to continue.</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="input-group mb-3 login-username-container">
+                            <input type="text" class="form-control" name="username" placeholder="Enter Username" required>
+                        </div>
+                        <div class="input-group mb-3 login-password-container">
+                            <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
+                            <div class="input-group-append login-eye-icon">
+                                <i id="eye-icon" class="fas fa-eye toggle-password" onclick="togglePassword()"></i>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <a href="{% url 'forgot_password' %}" class="forgot-password">Forgot Password?</a>
+                        </div>
+                        <div class="g-recaptcha" data-sitekey="6LfU480qAAAAAOP544VCY6VRhtcax-nJEO_ct9p3"></div>
+                        <button type="submit" class="btn btn-primary btn-block login-button">Login</button>
+                    </form>
+                </div>
+                
+                <div class="col-md-6 design-container">
+                    <!-- <h2 class="design-text">Academe TS</h2> -->
+                    <img src="/static/images/3d-1.png" alt="3D Icon" class="timekeeping-icon">
+                </div>
+            </div>
+        </div> 
     {% endif %}
 {% endblock %}
