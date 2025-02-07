@@ -218,8 +218,8 @@ def export_pdf(request, pk):
     page_width, page_height = letter
     margin = 36
     content_width = page_width - (2 * margin)
-    top_margin_for_table = 130  # Increased to accommodate new information
-    bottom_margin = margin + 80
+    top_margin_for_table = 150  # Increased to accommodate new information
+    bottom_margin = margin + 80 
     right_margin = page_width - margin
     available_height = page_height - top_margin_for_table - bottom_margin
 
