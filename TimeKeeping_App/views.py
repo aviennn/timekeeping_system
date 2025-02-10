@@ -35,6 +35,8 @@ from .forms import TimeRecordCreationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 
+
+
 def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
     current_time = timezone.now().astimezone(philippines_tz)
