@@ -3,8 +3,7 @@ from . import views
 from django.urls import path, include 
 
 urlpatterns = [
-    path('', views.main_page, name='main'),
-    path('dashboard', views.dashboard, name='dashboard'),
+    path('', views.dashboard, name='dashboard'),
     path('admin_dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('export_pdf/<int:pk>/', views.export_pdf, name='export_pdf'),
     path('logout/', views.logout_view, name='logout'),

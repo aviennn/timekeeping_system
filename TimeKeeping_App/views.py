@@ -35,8 +35,7 @@ from .forms import TimeRecordCreationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 
-def main_page(request):
-    return render(request, 'main.html')
+
 
 def dashboard(request):
     philippines_tz = pytz.timezone('Asia/Manila')
@@ -435,7 +434,7 @@ def export_pdf(request, pk):
 
 def logout_view(request):
     request.session.pop('current_employee_id', None)  
-    return redirect('main')
+    return redirect('dashboard')
 
 def admin_dashboard(request):
     error_message = None
@@ -497,7 +496,7 @@ class EmployeeRecord(UserPassesTestMixin, View):
         
 def logout_admin(request):
     logout(request)  
-    return redirect('main')
+    return redirect('admin_dashboard')
 
 def export_excel(request, pk):
     employee = get_object_or_404(Employee, pk=pk)
