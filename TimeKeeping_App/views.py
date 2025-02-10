@@ -34,6 +34,7 @@ from .forms import TimeRecordEditForm
 from .forms import TimeRecordCreationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
+from .forms import EmployeeEditForm
 
 
 
@@ -53,7 +54,7 @@ def dashboard(request):
 
     if request.method == 'POST':
         if not current_employee:  # Login process
-            username = request.POST.get('username')
+            username_or_email = request.POST.get('username')
             password = request.POST.get('password')
             recaptcha_response = request.POST.get('g-recaptcha-response')
 
@@ -70,17 +71,22 @@ def dashboard(request):
                     'current_datetime': current_time,
                 })
 
-            if username and password:
-                try:
-                    employee = Employee.objects.get(username=username)
+            if username_or_email and password:
+                employee = Employee.objects.filter(username=username_or_email).first()
+                
+                if not employee:
+                    employee = Employee.objects.filter(email=username_or_email).first()
+
+                if employee:
                     if check_password(password, employee.password):
-                        current_employee = employee
                         request.session['current_employee_id'] = employee.id
                         return redirect('dashboard')
                     else:
                         error_message = 'Incorrect password. Please try again.'
-                except Employee.DoesNotExist:
-                    error_message = 'Username not found. Please check your credentials.'
+                else:
+                    error_message = 'Username or email not found. Please check your credentials.'
+
+
 
         if current_employee:  # Handle clock-in, clock-out, and lunch toggle
             action = request.POST.get('action')
@@ -588,19 +594,20 @@ def create_employee(request):
         form = EmployeeCreationForm(request.POST)
         if form.is_valid():
             email = form.cleaned_data.get('email')
-            # Check for existing non-deleted email before saving
-            if Employee.objects.filter(email=email, is_deleted=False).exists():
-                form.add_error('email', 'This email is already registered to an inaactive account.')
+            # Check ALL existing emails, including deleted ones
+            if Employee.objects.filter(email=email).exists():
+                form.add_error('email', 'This email is already registered. Please use a different email address.')
             else:
                 try:
-                    # Set is_deleted=False explicitly when creating
                     employee = form.save(commit=False)
                     employee.is_deleted = False
                     employee.save()
                     messages.success(request, "Employee created successfully!")
                     return redirect("admin_dashboard")
                 except Exception as e:
-                    form.add_error('email', 'This email is already registered to an inactive account.')
+                    messages.error(request, f"An error occurred: {str(e)}")
+        else:
+            print(form.errors)  
 
         messages.error(request, "Failed to create employee. Please fix the errors in the form.")
     else:
@@ -613,6 +620,36 @@ def create_employee(request):
         "is_authenticated": request.user.is_authenticated 
     })
 
+@login_required(login_url='admin_dashboard')
+def edit_employee(request, employee_id):
+    employee = get_object_or_404(Employee, id=employee_id)
+
+    if request.method == "POST":
+        form = EmployeeEditForm(request.POST, instance=employee)
+        if form.is_valid():
+            email = form.cleaned_data.get('email')
+
+            # ✅ Fix: Allow current employee to keep their email
+            if Employee.objects.filter(email=email).exclude(id=employee.id).exists():
+                form.add_error('email', 'This email is already registered. Please use a different email address.')
+            else:
+                try:
+                    form.save()
+                    messages.success(request, "Employee updated successfully!")
+                    return redirect("view_user_info", employee_id=employee.id)
+                except Exception as e:
+                    messages.error(request, f"An error occurred: {str(e)}")
+        else:
+            print(form.errors)  
+
+        messages.error(request, "Failed to update employee. Please fix the errors in the form.")
+    else:
+        form = EmployeeEditForm(instance=employee)
+
+    return render(request, "view_user_info.html", {
+        "form": form,
+        "employee": employee
+    })
 
 def create_timerecord(request, pk):
     employee = get_object_or_404(Employee, id=pk)  

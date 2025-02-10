@@ -1,23 +1,78 @@
 from django import forms
 from .models import Employee
 from .models import TimeRecord
+from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 class EmployeeCreationForm(forms.ModelForm):
+    ALLOWED_EMAIL_DOMAINS = [
+        "gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com",
+        "aol.com", "protonmail.com", "yandex.com", "mail.com", "zoho.com",
+        "bulsu.edu.ph", "auf.edu.ph", "googlemail.com"
+    ]
+
     class Meta:
         model = Employee
-        fields = ['first_name', 'middle_name', 'last_name', 'email', 'joined_date']
+        fields = ['first_name', 'middle_name', 'last_name', 'email', 'employee_type']
+
+    employee_type = forms.ChoiceField(
+        choices=Employee.EMPLOYEE_TYPE_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email:
+            domain = email.split('@')[-1]
+            if domain not in self.ALLOWED_EMAIL_DOMAINS:
+                raise ValidationError(f"Invalid email domain. Allowed domains: {', '.join(self.ALLOWED_EMAIL_DOMAINS)}")
+        return email
 
     def save(self, commit=True):
         employee = super().save(commit=False)
+        employee.joined_date = timezone.now().date()  # Set today's date
         if commit:
             employee.save()
         return employee
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             field.widget.attrs.update({'class': 'form-control'})
+        
+        if self.instance and self.instance.pk:
+            self.fields['employee_type'].initial = self.instance.employee_type
 
+class EmployeeEditForm(forms.ModelForm):
+    class Meta:
+        model = Employee
+        fields = ['first_name', 'middle_name', 'last_name', 'email', 'joined_date', 'employee_type']
+        widgets = {
+            'joined_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        }
+
+    employee_type = forms.ChoiceField(
+        choices=Employee.EMPLOYEE_TYPE_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email:
+            allowed_domains = [
+                "gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com",
+                "aol.com", "protonmail.com", "yandex.com", "mail.com", "zoho.com",
+                "bulsu.edu.ph", "auf.edu.ph", "googlemail.com"
+            ]
+            domain = email.split('@')[-1]
+            if domain not in allowed_domains:
+                raise forms.ValidationError("Invalid email domain. Allowed domains: " + ", ".join(allowed_domains))
+        return email
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs.update({'class': 'form-control'})
     
 class TimeRecordCreationForm(forms.ModelForm):
     class Meta:

@@ -37,11 +37,17 @@ class EmployeeManager(models.Manager):
 
 
 class Employee(SoftDelete, models.Model):
+    EMPLOYEE_TYPE_CHOICES = [
+        ('Employee', 'Employee'),
+        ('Intern', 'Intern'),
+    ]
+        
     first_name = models.CharField(max_length=50)
     middle_name = models.CharField(max_length=50, null=True, blank=True)
     last_name = models.CharField(max_length=50)
     email = models.EmailField(unique=True)
     joined_date = models.DateField(default=timezone.now)
+    employee_type = models.CharField(max_length=10, choices=EMPLOYEE_TYPE_CHOICES)
     username = models.CharField(max_length=100, unique=True, editable=False)
     password = models.CharField(max_length=100)
     reset_code = models.CharField(max_length=6, null=True, blank=True)
@@ -52,46 +58,61 @@ class Employee(SoftDelete, models.Model):
     objects = EmployeeManager()
     
 
+    def generate_next_id(self):
+        year = self.joined_date.year
+
+        if self.employee_type == 'Intern':
+            prefix = f"OJT-{year}-"
+            existing_ids = Employee._base_manager.filter(
+                username__startswith=prefix
+            ).values_list('username', flat=True)
+            
+            numbers = [
+                int(username.split('-')[-1]) 
+                for username in existing_ids 
+                if username.split('-')[-1].isdigit()
+            ]
+            next_number = max(numbers, default=0) + 1
+            return f"{prefix}{next_number:03d}"
+
+        elif self.employee_type == 'Employee':
+            prefix = "M-100-"
+            existing_ids = Employee._base_manager.filter(
+                username__startswith=prefix
+            ).values_list('username', flat=True)
+            
+            numbers = [
+                int(username.split('-')[-1]) 
+                for username in existing_ids 
+                if username.split('-')[-1].isdigit()
+            ]
+            next_number = max(numbers, default=0) + 1
+            return f"{prefix}{next_number:02d}"
+
     def save(self, *args, **kwargs):
         if not self.username:
-            year = self.joined_date.year
-            super().save(*args, **kwargs)
-            formatted_id = f"{self.id:04d}"
-            self.username = f"{year}-{self.last_name}{self.first_name}-{formatted_id}".replace(" ", "")
-        
+            self.username = self.generate_next_id()
+
         if not self.password:
             self.password = make_password(self.username)
 
-        if self.pk:  
-            original = Employee.objects.get(pk=self.pk)
-            if original.first_name != self.first_name or original.last_name != self.last_name:
-                year = self.joined_date.year
-                formatted_id = f"{self.id:04d}"
-                self.username = f"{year}-{self.last_name}{self.first_name}-{formatted_id}".replace(" ", "")
-                self.password = make_password(self.username)
-
-        
         super().save(*args, **kwargs)
-
+    
     def generate_reset_code(self):
-        code = ''.join(random.choices(string.digits, k=6))
-        self.reset_code = code
-        self.reset_code_expiry = timezone.now() + timezone.timedelta(minutes=15)
-        self.save()
-        
-        # Send email with reset code
-        send_mail(
-            'Password Reset Code',
-            f'Your password reset code is: {code}\nThis code will expire in 15 minutes.',
-            'academetsmain@gmail.com',
-            [self.email],
-            fail_silently=False,
-        )
-        return code
-
-    def __str__(self):
-        return f"{self.first_name} {self.last_name}"
-
+            code = ''.join(random.choices(string.digits, k=6))
+            self.reset_code = code
+            self.reset_code_expiry = timezone.now() + timezone.timedelta(minutes=15)
+            self.save()
+            
+            # Send email with reset code
+            send_mail(
+                'Password Reset Code',
+                f'Your password reset code is: {code}\nThis code will expire in 15 minutes.',
+                'academetsmain@gmail.com',
+                [self.email],
+                fail_silently=False,
+            )
+            return code
 
 class TimeRecordManager(models.Manager):
     def get_queryset(self):
