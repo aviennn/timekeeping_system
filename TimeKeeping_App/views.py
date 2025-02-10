@@ -1,17 +1,23 @@
-from django.shortcuts import render
-from django.http import HttpResponse
-from django.utils import timezone
+import os
+import requests
+import pandas as pd
 import pytz
-from .models import Employee, TimeRecord
-from datetime import datetime
+from datetime import datetime, timedelta
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse, HttpResponseForbidden
+from django.utils import timezone
+from django.views import View
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import UserPassesTestMixin
+from django.contrib.auth.hashers import check_password, make_password
+from django.conf import settings
+from django.templatetags.static import static
+
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from django.shortcuts import render, redirect
-from django.views import View
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth import authenticate, login
-from django.contrib.auth.mixins import UserPassesTestMixin
-from django.http import HttpResponseForbidden
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, Paragraph
 from django.http import HttpResponse
@@ -28,19 +34,38 @@ from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
 from django.utils import timezone
 from .forms import ChangePasswordForm, ResetPasswordEmailForm, ResetPasswordForm
-from .models import Employee
+from .models import Employee, TimeRecord
 from django.contrib.auth.hashers import check_password
 from .forms import TimeRecordEditForm
 from .forms import TimeRecordCreationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from .forms import EmployeeEditForm
+from reportlab.lib import colors
+from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, Paragraph
 
+def get_current_time():
+    try:
+        response = requests.get('http://worldclockapi.com/api/json/utc/now', timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Convert UTC time to datetime
+            utc_time = datetime.strptime(data['currentDateTime'], "%Y-%m-%dT%H:%MZ")
+            
+            # Convert UTC to Manila time (UTC+8)
+            manila_tz = pytz.timezone('Asia/Manila')
+            manila_time = utc_time.replace(tzinfo=pytz.utc).astimezone(manila_tz)
+            
+            return manila_time
 
+    except Exception as e:
+        print("Error fetching time:", e)
+
+    return timezone.now()  # Fallback to server time if API fails
 
 def dashboard(request):
-    philippines_tz = pytz.timezone('Asia/Manila')
-    current_time = timezone.now().astimezone(philippines_tz)
+    current_time = get_current_time()
     current_employee = None
     error_message = None
 
@@ -91,7 +116,9 @@ def dashboard(request):
         if current_employee:  # Handle clock-in, clock-out, and lunch toggle
             action = request.POST.get('action')
             if action:
+                current_time = get_current_time()
                 today = current_time.date()
+
                 latest_record = TimeRecord.objects.filter(
                     employee=current_employee,
                     date=today
@@ -788,7 +815,7 @@ def reset_password(request):
                 employee = Employee.objects.get(
                     email=email,
                     reset_code=code,
-                    reset_code_expiry__gt=timezone.now()
+                    reset_code_expiry__gt=get_current_time()
                 )
 
                 if new_password != confirm_password:
