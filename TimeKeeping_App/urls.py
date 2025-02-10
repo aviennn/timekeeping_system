@@ -20,4 +20,5 @@ urlpatterns = [
     path('edit_time_record/<int:pk>/', views.edit_time_record, name='edit_time_record'),
     path("create_timerecord/<int:pk>/", views.create_timerecord, name="create_timerecord"),
     path('delete-timerecord/<int:pk>/', views.delete_time_record, name='delete_time_record'),
+    path("employee/edit/<int:employee_id>/", views.edit_employee, name="edit_employee"),
 ]
