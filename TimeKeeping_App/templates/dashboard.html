@@ -53,7 +53,7 @@
     {% if current_employee %}
         <div class="category-header">
             <div class="text-section">
-                <p class="welcome-text">Welcome, <b>{{ current_employee.username }}!</b></p>
+                <p class="welcome-text">Welcome, <b>{{ current_employee.first_name }} {{ current_employee.last_name }}!</b></p>
                 <h1><b>Timekeeping</b></h1>
             </div>
             <img src="/static/images/3d-1.png" alt="Employee Icon">
