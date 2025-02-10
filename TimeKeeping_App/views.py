@@ -242,29 +242,22 @@ def export_pdf(request, pk):
             records = TimeRecord.objects.filter(employee=current_employee).order_by('date')
 
         # Logo and title drawing code
-        icon_path = os.path.join(settings.BASE_DIR, 'TimeKeeping_App', 'static', 'images', 'icon-3.jpg')
+        icon_path = os.path.join(settings.BASE_DIR, 'TimeKeeping_App', 'static', 'images', 'gc-6.jpg')
         icon_x = margin
         icon_y = page_height - margin - 14
 
-        p.setFont("Helvetica-Bold", 24)
-        title_text = "Academe TS"
-        title_width = p.stringWidth(title_text, "Helvetica-Bold", 24)
-        title_x = (page_width - title_width) / 2
-
         spacing = 5
-        image_width = 42
-        title_width = p.stringWidth(title_text, "Helvetica-Bold", 31)
-        total_width = image_width + spacing + title_width
+        image_width = 130
+        total_width = image_width + spacing
         start_x = (page_width - total_width) / 2
         text_y = page_height - margin - 6
 
         p.drawImage(icon_path, start_x, icon_y, width=image_width, height=30)
-        p.drawString(start_x + image_width + spacing, text_y, title_text)
 
         p.setFont("Helvetica", 12)
-        subtitle_text = "GOCLOUD Asia, Inc."
+        subtitle_text = "Timekeeping System"
         subtitle_width = p.stringWidth(subtitle_text, "Helvetica", 12)
-        subtitle_y_position = page_height - margin - 25
+        subtitle_y_position = page_height - margin - 30
         p.drawString((page_width - subtitle_width) / 2, subtitle_y_position, subtitle_text)
 
         # Employee name
@@ -602,7 +595,7 @@ def create_employee(request):
                 except Exception as e:
                     form.add_error('email', 'This email is already registered to an inactive account.')
 
-        messages.error(request, "Failed to create employee. Please fix the errors in the form.")
+        messages.warning(request, "Failed to create employee. Please fix the errors in the form.")
     else:
         form = EmployeeCreationForm()
 

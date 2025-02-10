@@ -28,3 +28,7 @@ html, body {
 .timeline-header {
     font-size: 14px !important;
 }
+
+.login-logo img {
+    margin-bottom: 10px !important;
+}

@@ -134,15 +134,15 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 JAZZMIN_SETTINGS = {
-    "site_title": "Academe TS",
-    "site_header": "Academe TS",
-    "site_brand": "Academe TS",
-    "site_logo":"images/icon-1.png",
-    "login_logo":"images/icon-2.png",
-    "login_logo_dark":"images/icon-2.png",
+    "site_title": "GOCLOUD Inc.",
+    "site_header": "GOCLOUD Inc.",
+    "site_brand": "gocloud",
+    "site_logo":"images/gc-3.png",
+    "login_logo":"images/gc-logo-7.png",
+    "login_logo_dark":"images/gc-logo-7.png",
     #"site_logo_classes": "",
-    "site_icon":"images/favicon.png",
-    "welcome_sign": "Academe TS by GOCLOUD",
+    "site_icon":"images/gc-5.png",
+    "welcome_sign": "GOCLOUD Inc. Timekeeping System - Admin",
     "copyright": "GOCLOUD Inc",
     #"search_model": ["auth.User", "auth.Group"],
     "user_avatar": "",
