@@ -44,28 +44,13 @@ from .forms import EmployeeEditForm
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, Paragraph
 
-def get_current_time():
-    try:
-        response = requests.get('http://worldclockapi.com/api/json/utc/now', timeout=5)
-        if response.status_code == 200:
-            data = response.json()
-            
-            # Convert UTC time to datetime
-            utc_time = datetime.strptime(data['currentDateTime'], "%Y-%m-%dT%H:%MZ")
-            
-            # Convert UTC to Manila time (UTC+8)
-            manila_tz = pytz.timezone('Asia/Manila')
-            manila_time = utc_time.replace(tzinfo=pytz.utc).astimezone(manila_tz)
-            
-            return manila_time
-
-    except Exception as e:
-        print("Error fetching time:", e)
-
-    return timezone.now()  # Fallback to server time if API fails
 
 def dashboard(request):
-    current_time = get_current_time()
+   
+    philippines_tz = pytz.timezone('Asia/Manila')
+
+    current_time = timezone.now().astimezone(philippines_tz)
+
     current_employee = None
     error_message = None
 
@@ -116,7 +101,7 @@ def dashboard(request):
         if current_employee:  # Handle clock-in, clock-out, and lunch toggle
             action = request.POST.get('action')
             if action:
-                current_time = get_current_time()
+                #current_time = get_current_time()
                 today = current_time.date()
 
                 latest_record = TimeRecord.objects.filter(
@@ -162,6 +147,7 @@ def dashboard(request):
                         date=today,
                         clock_in=current_time.time()
                     )
+    reset_success = request.session.pop('reset_success', None)
 
     # Update user status
     status = "Awaiting Status"
@@ -189,7 +175,8 @@ def dashboard(request):
         'current_datetime': current_time,
         'status': status,
         'lunch_button_label': lunch_button_label,
-        'error_message': error_message
+        'error_message': error_message,
+        'reset_success': reset_success
     })
 
 def format_time(time_value):
@@ -275,29 +262,22 @@ def export_pdf(request, pk):
             records = TimeRecord.objects.filter(employee=current_employee).order_by('date')
 
         # Logo and title drawing code
-        icon_path = os.path.join(settings.BASE_DIR, 'TimeKeeping_App', 'static', 'images', 'icon-3.jpg')
+        icon_path = os.path.join(settings.BASE_DIR, 'TimeKeeping_App', 'static', 'images', 'gc-6.jpg')
         icon_x = margin
         icon_y = page_height - margin - 14
 
-        p.setFont("Helvetica-Bold", 24)
-        title_text = "Academe TS"
-        title_width = p.stringWidth(title_text, "Helvetica-Bold", 24)
-        title_x = (page_width - title_width) / 2
-
         spacing = 5
-        image_width = 42
-        title_width = p.stringWidth(title_text, "Helvetica-Bold", 31)
-        total_width = image_width + spacing + title_width
+        image_width = 130
+        total_width = image_width + spacing
         start_x = (page_width - total_width) / 2
         text_y = page_height - margin - 6
 
         p.drawImage(icon_path, start_x, icon_y, width=image_width, height=30)
-        p.drawString(start_x + image_width + spacing, text_y, title_text)
 
         p.setFont("Helvetica", 12)
-        subtitle_text = "GOCLOUD Asia, Inc."
+        subtitle_text = "Timekeeping System"
         subtitle_width = p.stringWidth(subtitle_text, "Helvetica", 12)
-        subtitle_y_position = page_height - margin - 25
+        subtitle_y_position = page_height - margin - 30
         p.drawString((page_width - subtitle_width) / 2, subtitle_y_position, subtitle_text)
 
         # Employee name
@@ -636,7 +616,7 @@ def create_employee(request):
         else:
             print(form.errors)  
 
-        messages.error(request, "Failed to create employee. Please fix the errors in the form.")
+        messages.warning(request, "Failed to create employee. Please fix the errors in the form.")
     else:
         form = EmployeeCreationForm()
 
@@ -772,8 +752,6 @@ def change_password(request):
     })
 
 def forgot_password(request):
-    error_message = None
-
     if request.method == 'POST':
         form = ResetPasswordEmailForm(request.POST)
         if form.is_valid():
@@ -783,21 +761,20 @@ def forgot_password(request):
                 reset_code = employee.generate_reset_code()
                 request.session['reset_email'] = email
                 
+                # Store success message and redirect to reset_password
                 messages.success(request, 'Reset code has been sent to your email.')
-                return redirect('reset_password')
+                return redirect('reset_password')  # Redirects user to reset_password.html
+
             except Employee.DoesNotExist:
-                error_message = 'No account found with this email.'
+                messages.error(request, 'No account found with this email.')
+                return redirect('forgot_password')
+
     else:
         form = ResetPasswordEmailForm()
 
-    return render(request, 'forgot_password.html', {
-        'form': form,
-        'error_message': error_message
-    })
+    return render(request, 'forgot_password.html', {'form': form})
 
 def reset_password(request):
-    error_message = None
-
     if 'reset_email' not in request.session:
         messages.error(request, 'Please provide your email first.')
         return redirect('forgot_password')
@@ -815,30 +792,33 @@ def reset_password(request):
                 employee = Employee.objects.get(
                     email=email,
                     reset_code=code,
-                    reset_code_expiry__gt=get_current_time()
+                    reset_code_expiry__gt=timezone.now()
                 )
 
                 if new_password != confirm_password:
-                    error_message = 'Passwords do not match.'
-                else:
-                    employee.password = make_password(new_password)
-                    employee.reset_code = None
-                    employee.reset_code_expiry = None
-                    employee.save()
+                    messages.error(request, 'Passwords do not match.')
+                    return redirect('reset_password')
 
-                    del request.session['reset_email']
-                    messages.success(request, 'Password reset successfully!')
-                    return redirect('dashboard')
+                employee.password = make_password(new_password)
+                employee.reset_code = None
+                employee.reset_code_expiry = None
+                employee.save()
+
+                del request.session['reset_email']
+
+                # Store success message in session instead of Django messages
+                request.session['reset_success'] = 'Password reset successfully! You can now log in.'
+
+                return redirect('dashboard')  # Redirect to dashboard
 
             except Employee.DoesNotExist:
-                error_message = 'Invalid or expired reset code.'
+                messages.error(request, 'Invalid or expired reset code.')
+                return redirect('reset_password')
+
     else:
         form = ResetPasswordForm()
 
-    return render(request, 'reset_password.html', {
-        'form': form,
-        'error_message': error_message
-    })
+    return render(request, 'reset_password.html', {'form': form})
     
 
 def change_employee_password(request, employee_id):
