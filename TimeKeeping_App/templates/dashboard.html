@@ -52,7 +52,7 @@
     {% if current_employee %}
         <div class="category-header">
             <div class="text-section">
-                <p class="welcome-text">Welcome, <b>{{ current_employee.username }}!</b></p>
+                <p class="welcome-text">Welcome, <b>{{ current_employee.first_name }} {{ current_employee.last_name }}!</b></p>
                 <h1><b>Timekeeping</b></h1>
             </div>
             <img src="/static/images/3d-1.png" alt="Employee Icon">
@@ -175,6 +175,11 @@
     {% endif %}
     
     <div style="margin-top: 8%;">
+        {% if not current_employee and reset_success %}
+            <div class="alert alert-success text-center mt-3">
+                <i class="fas fa-check-circle"></i> {{ reset_success }}
+            </div>
+        {% endif %}
         <div class="login-form-custom d-flex justify-content-center">
             <div class="row">
                 <div class="login-form-custom-container col-xl-6 shadow">
