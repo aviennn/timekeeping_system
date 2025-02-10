@@ -27,26 +27,25 @@ from .forms import (
     ResetPasswordForm, TimeRecordEditForm, TimeRecordCreationForm
 )
 
+import random
+import ntplib
+from datetime import datetime, timezone
+import pytz
+
+NTP_SERVERS = ["pool.ntp.org", "time.google.com", "time.windows.com", "time.apple.com"]
 
 def get_current_time():
-    try:
-        response = requests.get('http://worldclockapi.com/api/json/utc/now', timeout=5)
-        if response.status_code == 200:
-            data = response.json()
-            
-            # Convert UTC time to datetime
-            utc_time = datetime.strptime(data['currentDateTime'], "%Y-%m-%dT%H:%MZ")
-            
-            # Convert UTC to Manila time (UTC+8)
-            manila_tz = pytz.timezone('Asia/Manila')
-            manila_time = utc_time.replace(tzinfo=pytz.utc).astimezone(manila_tz)
-            
-            return manila_time
+    client = ntplib.NTPClient()
+    for server in random.sample(NTP_SERVERS, len(NTP_SERVERS)):  # Try multiple servers
+        try:
+            response = client.request(server, version=3)
+            utc_time = datetime.fromtimestamp(response.tx_time, tz=timezone.utc)
+            return utc_time.astimezone(pytz.timezone('Asia/Manila'))
+        except Exception as e:
+            print(f"Failed to fetch time from {server}: {e}")
+    return datetime.now(pytz.timezone('Asia/Manila'))  # Fallback to system time
 
-    except Exception as e:
-        print("Error fetching time:", e)
-
-    return timezone.now()  # Fallback to server time if API fails
+print(get_current_time())
 
 def dashboard(request):
     current_time = get_current_time()
