@@ -131,41 +131,62 @@
 
                     <form method="POST" action="{% url 'edit_employee' employee.id %}">
                         {% csrf_token %}
-                            <div class="form-group">
-                                <label class="font-weight-bold text-secondary" for="{{ form.employee_type.id_for_label }}">Employee Type</label>
+                        <div class="form-group">
+                            <label class="font-weight-bold text-secondary" for="{{ form.employee_type.id_for_label }}">Employee Type</label>
+                            {% if employee.employee_type == 'Employee' %}
+                                <select name="employee_type" id="{{ form.employee_type.id_for_label }}" class="form-control" disabled>
+                                    <option value="Employee" selected>Employee</option>
+                                </select>
+                                <input type="hidden" name="employee_type" value="Employee">
+                                <small class="form-text text-muted">Employee type cannot be changed once set to Employee.</small>
+                            {% else %}
                                 {{ form.employee_type }}
-                            </div>
-                            <div class="form-group">
-                                <label class="font-weight-bold text-secondary" for="{{ form.first_name.id_for_label }}">First Name</label>
-                                {{ form.first_name }}
-                            </div>
-        
-                            <div class="form-group">
-                                <label class="font-weight-bold text-secondary" for="{{ form.middle_name.id_for_label }}">Middle Name</label>
-                                {{ form.middle_name }}
-                            </div>
-        
-                            <div class="form-group">
-                                <label class="font-weight-bold text-secondary" for="{{ form.last_name.id_for_label }}">Last Name</label>
-                                {{ form.last_name }}
-                            </div>
-        
-                            <div class="form-group">
-                                <label class="font-weight-bold text-secondary" for="{{ form.email.id_for_label }}">Email</label>
-                                {{ form.email }}
-                            </div>
-        
-                            <div class="form-group mb-4">
-                                <label class="font-weight-bold text-secondary" for="{{ form.joined_date.id_for_label }}">Join Date</label>
-                                <input type="date" name="joined_date" id="{{ form.joined_date.id_for_label }}" 
-                                       class="form-control" value="{{ employee.joined_date|date:'Y-m-d' }}">
-                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="font-weight-bold text-secondary" for="{{ form.first_name.id_for_label }}">First Name</label>
+                            {{ form.first_name }}
+                        </div>
+                    
+                        <div class="form-group">
+                            <label class="font-weight-bold text-secondary" for="{{ form.middle_name.id_for_label }}">Middle Name</label>
+                            {{ form.middle_name }}
+                        </div>
+                    
+                        <div class="form-group">
+                            <label class="font-weight-bold text-secondary" for="{{ form.last_name.id_for_label }}">Last Name</label>
+                            {{ form.last_name }}
+                        </div>
+                    
+                        <div class="form-group">
+                            <label class="font-weight-bold text-secondary" for="{{ form.email.id_for_label }}">Email</label>
+                            <input type="email"
+                                   name="{{ form.email.name }}"
+                                   id="{{ form.email.id_for_label }}"
+                                   class="form-control {% if form.email.errors %}is-invalid{% endif %}"
+                                   value="{{ form.email.value|default_if_none:'' }}"
+                                   required>
+                            {% for error in form.email.errors %}
+                                <div class="invalid-feedback">
+                                    {{ error }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    
+                        <div class="form-group mb-4">
+                            <label class="font-weight-bold text-secondary" for="{{ form.joined_date.id_for_label }}">Join Date</label>
+                            <input type="date" name="joined_date" id="{{ form.joined_date.id_for_label }}" 
+                                   class="form-control" value="{{ employee.joined_date|date:'Y-m-d' }}">
+                        </div>
+                        
                         <hr class="mt-4">
                         
                         <div class="mx-3 d-flex justify-content-center">
                             <button type="submit" class="btn btn-primary"><i class='fas fa-save'></i> Save Changes</button>
                         </div>
                     </form>
+                    
                 </div>
             </div>
         </div>
@@ -196,4 +217,25 @@
             </div>
         </footer>
     </div>
+    
+    {% if show_modal %}
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            $('#editEmployeeModal').modal('show');
+        });
+    </script>
+    {% endif %}
+
 {% endblock %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const employeeType = "{{ employee.employee_type }}";
+        const employeeTypeSelect = document.querySelector('#{{ form.employee_type.id_for_label }}');
+        
+        if (employeeType === 'Employee') {
+            employeeTypeSelect.disabled = true;
+            employeeTypeSelect.style.backgroundColor = '#e9ecef';
+            employeeTypeSelect.style.cursor = 'not-allowed';
+        }
+    });
+</script>

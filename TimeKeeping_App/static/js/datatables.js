@@ -16,3 +16,14 @@ $(document).ready(function() {
     "order": [] // Disable initial sorting
   });
 });
+
+$(document).ready(function() {
+  $('#dataTable1').DataTable({
+      pageLength: 5,         // Show 5 entries per page
+      order: [[2, 'desc']],  // Sort by Timestamp (3rd column) in descending order
+      columnDefs: [
+          { targets: 2, className: 'dt-head-left dt-body-left' } // Apply left alignment to header and body
+      ]
+  });
+});
+

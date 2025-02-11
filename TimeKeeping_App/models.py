@@ -5,6 +5,9 @@ from django.contrib.auth.hashers import make_password
 from django.core.mail import send_mail
 import random
 import string
+from django.db import models
+from django.contrib.auth.models import User  # Django's built-in User model
+from django.utils.timezone import now
 
 class SoftDelete(models.Model):
     is_deleted = models.BooleanField(default=False)
@@ -57,46 +60,28 @@ class Employee(SoftDelete, models.Model):
     
     objects = EmployeeManager()
     
-
     def generate_next_id(self):
-        year = self.joined_date.year
+        if not self.pk:  
+            return None
 
         if self.employee_type == 'Intern':
-            prefix = f"OJT-{year}-"
-            existing_ids = Employee._base_manager.filter(
-                username__startswith=prefix
-            ).values_list('username', flat=True)
-            
-            numbers = [
-                int(username.split('-')[-1]) 
-                for username in existing_ids 
-                if username.split('-')[-1].isdigit()
-            ]
-            next_number = max(numbers, default=0) + 1
-            return f"{prefix}{next_number:03d}"
-
+            return f"OJT-{self.joined_date.year}-{self.pk:02d}"
         elif self.employee_type == 'Employee':
-            prefix = "M-100-"
-            existing_ids = Employee._base_manager.filter(
-                username__startswith=prefix
-            ).values_list('username', flat=True)
-            
-            numbers = [
-                int(username.split('-')[-1]) 
-                for username in existing_ids 
-                if username.split('-')[-1].isdigit()
-            ]
-            next_number = max(numbers, default=0) + 1
-            return f"{prefix}{next_number:02d}"
+            return f"M-100-{self.pk:02d}"
+
 
     def save(self, *args, **kwargs):
-        if not self.username:
+        is_new = self._state.adding 
+        super().save(*args, **kwargs) 
+
+        if is_new:  
             self.username = self.generate_next_id()
+            super().save(update_fields=['username'])  
 
         if not self.password:
             self.password = make_password(self.username)
+            super().save(update_fields=['password'])  
 
-        super().save(*args, **kwargs)
     
     def generate_reset_code(self):
             code = ''.join(random.choices(string.digits, k=6))
@@ -251,3 +236,18 @@ class TimeRecord(SoftDelete, models.Model):
 
     def __str__(self):
         return f"TimeRecord for {self.employee} on {self.date}"
+
+class ActivityLog(models.Model):
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)  # Admins
+    employee = models.ForeignKey(Employee, null=True, blank=True, on_delete=models.CASCADE)  # Employees
+    action = models.CharField(max_length=255)  # Description of action
+    timestamp = models.DateTimeField()  # Set manually using NTP time
+
+    def __str__(self):
+        if self.user and self.user.is_superuser:
+            return f"Admin {self.user.username} - {self.action} at {self.timestamp}"
+        elif self.employee:
+            return f"Employee {self.employee.username} - {self.action} at {self.timestamp}"
+        return f"Unknown User - {self.action} at {self.timestamp}"
+
+
