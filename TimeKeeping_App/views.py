@@ -630,26 +630,36 @@ def create_employee(request):
 @login_required(login_url='admin_dashboard')
 def edit_employee(request, employee_id):
     employee = get_object_or_404(Employee, id=employee_id)
+    old_employee_type = employee.employee_type
 
     if request.method == "POST":
         form = EmployeeEditForm(request.POST, instance=employee)
         if form.is_valid():
             email = form.cleaned_data.get('email')
+            new_employee_type = form.cleaned_data.get('employee_type')
 
-            # ✅ Fix: Allow current employee to keep their email
+            # Check for duplicate email
             if Employee.objects.filter(email=email).exclude(id=employee.id).exists():
                 form.add_error('email', 'This email is already registered. Please use a different email address.')
             else:
                 try:
-                    form.save()
+                    employee = form.save()
+
+                    if old_employee_type == 'Intern' and new_employee_type == 'Employee':
+                        new_username = f"M-100-{employee.pk:02d}"
+                        employee.username = new_username
+                        employee.password = make_password(new_username)
+                        employee.save()
+
                     messages.success(request, "Employee updated successfully!")
+                    if old_employee_type != new_employee_type:
+                        messages.info(request, f"Username and password have been updated to: {employee.username}")
                     return redirect("view_user_info", employee_id=employee.id)
                 except Exception as e:
                     messages.error(request, f"An error occurred: {str(e)}")
         else:
-            print(form.errors)  
-
-        messages.error(request, "Failed to update employee. Please fix the errors in the form.")
+            print(form.errors)
+            messages.error(request, "Failed to update employee. Please fix the errors in the form.")
     else:
         form = EmployeeEditForm(instance=employee)
 
