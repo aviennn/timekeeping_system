@@ -50,7 +50,7 @@ class Employee(SoftDelete, models.Model):
     last_name = models.CharField(max_length=50)
     email = models.EmailField(unique=True)
     joined_date = models.DateField(default=timezone.now)
-    employee_type = models.CharField(max_length=10, choices=EMPLOYEE_TYPE_CHOICES)
+    employee_type = models.CharField(max_length=10, choices=EMPLOYEE_TYPE_CHOICES,null=True)
     username = models.CharField(max_length=100, unique=True, editable=False)
     password = models.CharField(max_length=100)
     reset_code = models.CharField(max_length=6, null=True, blank=True)
