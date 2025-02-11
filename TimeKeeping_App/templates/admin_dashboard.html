@@ -304,7 +304,16 @@
                 });
             });
         </script>
+    {% endif %}  
+
+    {% if open_modal %}
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        $('#addEmployeeModal').modal('show');
+    });
+    </script>
     {% endif %}
+    
 {% endblock %}
 
 {% block footer %}

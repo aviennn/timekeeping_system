@@ -161,7 +161,17 @@
                     
                         <div class="form-group">
                             <label class="font-weight-bold text-secondary" for="{{ form.email.id_for_label }}">Email</label>
-                            {{ form.email }}
+                            <input type="email"
+                                   name="{{ form.email.name }}"
+                                   id="{{ form.email.id_for_label }}"
+                                   class="form-control {% if form.email.errors %}is-invalid{% endif %}"
+                                   value="{{ form.email.value|default_if_none:'' }}"
+                                   required>
+                            {% for error in form.email.errors %}
+                                <div class="invalid-feedback">
+                                    {{ error }}
+                                </div>
+                            {% endfor %}
                         </div>
                     
                         <div class="form-group mb-4">
@@ -207,6 +217,15 @@
             </div>
         </footer>
     </div>
+    
+    {% if show_modal %}
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            $('#editEmployeeModal').modal('show');
+        });
+    </script>
+    {% endif %}
+
 {% endblock %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {

@@ -609,14 +609,19 @@ def create_employee(request):
                     employee = form.save(commit=False)
                     employee.is_deleted = False
                     employee.save()
-                    messages.success(request, "Employee created successfully!")
+                    messages.success(request, "User created successfully!")
                     return redirect("admin_dashboard")
                 except Exception as e:
                     messages.error(request, f"An error occurred: {str(e)}")
-        else:
-            print(form.errors)  
 
-        messages.warning(request, "Failed to create employee. Please fix the errors in the form.")
+        # Instead of adding a warning message, pass a flag to open the modal
+        employees = Employee.objects.filter(is_deleted=False)
+        return render(request, "admin_dashboard.html", {
+            "form": form,
+            "employees": employees,
+            "open_modal": True,  # Flag indicating that the Add Employee modal should open
+            "is_authenticated": request.user.is_authenticated 
+        })
     else:
         form = EmployeeCreationForm()
 
@@ -631,6 +636,7 @@ def create_employee(request):
 def edit_employee(request, employee_id):
     employee = get_object_or_404(Employee, id=employee_id)
     old_employee_type = employee.employee_type
+    show_modal = False  # Flag to control modal reopening on errors
 
     if request.method == "POST":
         form = EmployeeEditForm(request.POST, instance=employee)
@@ -638,34 +644,42 @@ def edit_employee(request, employee_id):
             email = form.cleaned_data.get('email')
             new_employee_type = form.cleaned_data.get('employee_type')
 
-            # Check for duplicate email
-            if Employee.objects.filter(email=email).exclude(id=employee.id).exists():
-                form.add_error('email', 'This email is already registered. Please use a different email address.')
+            # Check for duplicate email including handling for a deleted record
+            existing_employee = Employee.objects.filter(email=email).exclude(id=employee.id).first()
+            if existing_employee:
+                if existing_employee.is_deleted:
+                    form.add_error('email', 'This email belongs to a deleted account. Please restore the account or use a different email address.')
+                else:
+                    form.add_error('email', 'This email is already registered. Please use a different email address.')
+                show_modal = True
             else:
                 try:
                     employee = form.save()
 
+                    # Update username and password if an Intern becomes an Employee
                     if old_employee_type == 'Intern' and new_employee_type == 'Employee':
                         new_username = f"M-100-{employee.pk:02d}"
                         employee.username = new_username
                         employee.password = make_password(new_username)
                         employee.save()
 
-                    messages.success(request, "Employee updated successfully!")
+                    messages.success(request, "User updated successfully!")
                     if old_employee_type != new_employee_type:
                         messages.info(request, f"Username and password have been updated to: {employee.username}")
                     return redirect("view_user_info", employee_id=employee.id)
                 except Exception as e:
-                    messages.error(request, f"An error occurred: {str(e)}")
+                    form.add_error(None, f"An error occurred: {str(e)}")
+                    show_modal = True
         else:
             print(form.errors)
-            messages.error(request, "Failed to update employee. Please fix the errors in the form.")
+            show_modal = True
     else:
         form = EmployeeEditForm(instance=employee)
 
     return render(request, "view_user_info.html", {
         "form": form,
-        "employee": employee
+        "employee": employee,
+        "show_modal": show_modal,
     })
 
 def create_timerecord(request, pk):
@@ -689,17 +703,18 @@ def view_user_info(request, employee_id):
         return HttpResponseForbidden("You do not have permission to access this page.")
 
     employee = get_object_or_404(Employee, id=employee_id)
-    show_modal = False 
+    show_modal = False  # Modal closed by default
 
     if request.method == 'POST':
         form = EmployeeCreationForm(request.POST, instance=employee)
         if form.is_valid():
             form.save()
-            messages.success(request, "Employee details updated successfully!")
+            messages.success(request, "User details updated successfully!")
             return redirect('view_user_info', employee_id=employee.id)
         else:
-            messages.error(request, "Failed to update employee. Please fix the errors in the form.")
+            # Remove the main error message and set the flag to open the modal.
             show_modal = True
+            # Optionally refresh the employee data.
             employee.refresh_from_db()
     else:
         form = EmployeeCreationForm(instance=employee)
@@ -875,5 +890,5 @@ def delete_time_record(request, pk):
 def delete_employee(request, pk):
     record = get_object_or_404(Employee, pk=pk)
     record.soft_delete()
-    messages.success(request, "Employee record deleted successfully.")
+    messages.success(request, "User record deleted successfully.")
     return redirect('admin_dashboard')
