@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.views import View
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.auth.hashers import check_password, make_password
@@ -34,10 +35,10 @@ from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
 from django.utils import timezone
 from .forms import ChangePasswordForm, ResetPasswordEmailForm, ResetPasswordForm
-from .models import Employee, TimeRecord
+from .models import Employee, TimeRecord, ActivityLog
 from .forms import (
     EmployeeCreationForm, ChangePasswordForm, ResetPasswordEmailForm,
-    ResetPasswordForm, TimeRecordEditForm, TimeRecordCreationForm
+    ResetPasswordForm, TimeRecordEditForm, TimeRecordCreationForm, EmployeeEditForm
 )
 
 import random
@@ -59,6 +60,13 @@ def get_current_time():
     return datetime.now(pytz.timezone('Asia/Manila'))  # Fallback to system time
 
 print(get_current_time())
+
+def log_activity(user, action):
+    """Logs actions for both Employees and Superuser Admins."""
+    if isinstance(user, User) and user.is_superuser:  # If Admin (Superuser)
+        ActivityLog.objects.create(user=user, action=action, timestamp=get_current_time())
+    elif isinstance(user, Employee):  # If Employee
+        ActivityLog.objects.create(employee=user, action=action, timestamp=get_current_time())
 
 def dashboard(request):
     current_time = get_current_time()
@@ -101,6 +109,7 @@ def dashboard(request):
                 if employee:
                     if check_password(password, employee.password):
                         request.session['current_employee_id'] = employee.id
+                        log_activity(employee, "Logged in")  # Log employee login
                         return redirect('dashboard')
                     else:
                         error_message = 'Incorrect password. Please try again.'
@@ -138,16 +147,19 @@ def dashboard(request):
                     else:
                         latest_record.clock_out = current_time.time()
                         latest_record.save()
+                        log_activity(current_employee, "Clocked out")
                 
                 elif action == 'lunch_toggle' and latest_record:
                     if not latest_record.clock_in or latest_record.clock_out:
                         error_message = 'Please clock in before starting your lunch break.'
                     elif not latest_record.lunch_start:
                         latest_record.lunch_start = current_time.time()
+                        log_activity(current_employee, "Started lunch break")
                         latest_record.lunch_end = None
                         latest_record.save()
                     elif not latest_record.lunch_end:
                         latest_record.lunch_end = current_time.time()
+                        log_activity(current_employee, "Ended lunch break")
                         latest_record.save()
                     else:
                         error_message = 'You have already taken your lunch break for today.'
@@ -158,6 +170,7 @@ def dashboard(request):
                         date=today,
                         clock_in=current_time.time()
                     )
+                    log_activity(current_employee, "Clocked in")
     reset_success = request.session.pop('reset_success', None)
 
     # Update user status
@@ -457,12 +470,18 @@ def export_pdf(request, pk):
     return response
 
 def logout_view(request):
-    request.session.pop('current_employee_id', None)  
+    employee_id = request.session.get('current_employee_id')
+    if employee_id:
+        employee = Employee.objects.get(id=employee_id)
+        log_activity(employee, "Logged out")  # Log employee logout
+
+    request.session.pop('current_employee_id', None)
     return redirect('dashboard')
 
 def admin_dashboard(request):
     error_message = None
-    employees = Employee.objects.all()  
+    employees = Employee.objects.all()
+    activity_logs = ActivityLog.objects.order_by('-timestamp')[:5]  # Last 10 logs  
 
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -481,6 +500,7 @@ def admin_dashboard(request):
             user = authenticate(request, username=username, password=password)
             if user is not None:
                 login(request, user)
+                log_activity(user, "Logged in to Admin Dashboard")
                 return redirect('admin_dashboard')
             else:
                 error_message = "Invalid username or password."
@@ -489,6 +509,7 @@ def admin_dashboard(request):
         'employees': employees, 
         'is_authenticated': request.user.is_authenticated,
         'error_message': error_message,  # Always pass error_message
+        'activity_logs': activity_logs,
     })
 
 class EmployeeRecord(UserPassesTestMixin, View):
@@ -519,6 +540,8 @@ class EmployeeRecord(UserPassesTestMixin, View):
         })
         
 def logout_admin(request):
+    if request.user.is_authenticated and request.user.is_superuser:
+        log_activity(request.user, "Logged out from Admin Dashboard")
     logout(request)  
     return redirect('admin_dashboard')
 
@@ -621,6 +644,7 @@ def create_employee(request):
                     employee.is_deleted = False
                     employee.save()
                     messages.success(request, "Employee created successfully!")
+                    log_activity(request.user, f"Created Employee {employee.username}")
                     return redirect("admin_dashboard")
                 except Exception as e:
                     messages.error(request, f"An error occurred: {str(e)}")
@@ -653,6 +677,7 @@ def edit_employee(request, employee_id):
             else:
                 try:
                     form.save()
+                    log_activity(request.user, f"Edited Employee Information of {employee.username}")
                     messages.success(request, "Employee updated successfully!")
                     return redirect("view_user_info", employee_id=employee.id)
                 except Exception as e:
@@ -678,6 +703,7 @@ def create_timerecord(request, pk):
             time_record = form.save(commit=False)  
             time_record.employee = employee  
             time_record.save()  
+            log_activity(request.user, f"Created Time Record for {employee.username}")
             messages.success(request, "Time record created successfully!")
             return redirect("view_records", pk=employee.id)  
     else:
@@ -696,6 +722,7 @@ def view_user_info(request, employee_id):
         form = EmployeeCreationForm(request.POST, instance=employee)
         if form.is_valid():
             form.save()
+            log_activity(request.user, f"Updated Employee Information of {employee.username}")
             messages.success(request, "Employee details updated successfully!")
             return redirect('view_user_info', employee_id=employee.id)
         else:
@@ -847,6 +874,7 @@ def change_employee_password(request, employee_id):
             storage.used = True
 
             messages.success(request, f"Password for {employee.first_name} {employee.last_name} has been updated successfully.")
+            log_activity(request.user, f"Changed Password of {employee.username}")
             return redirect('admin_dashboard')  
         else:
             messages.error(request, "Passwords do not match. Please try again.")
@@ -859,6 +887,7 @@ def edit_time_record(request, pk):
     if request.method == "POST":
         form = TimeRecordEditForm(request.POST, instance=record)
         if form.is_valid():
+            log_activity(request.user, "Edited Time Record for {record.username}")
             form.save()
             return redirect('view_records', pk=record.employee.id) 
     else:
@@ -869,6 +898,7 @@ def edit_time_record(request, pk):
 def delete_time_record(request, pk):
     record = get_object_or_404(TimeRecord, pk=pk)
     record.soft_delete()
+    log_activity(request.user, "Deleted Time Record of {record.username}")
     messages.success(request, "Time record deleted successfully.")
     return redirect('view_records', pk=record.employee.id)
 
@@ -876,5 +906,6 @@ def delete_time_record(request, pk):
 def delete_employee(request, pk):
     record = get_object_or_404(Employee, pk=pk)
     record.soft_delete()
+    log_activity(request.user, f"Deleted Employee {record.username}")
     messages.success(request, "Employee record deleted successfully.")
     return redirect('admin_dashboard')

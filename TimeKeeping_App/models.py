@@ -5,6 +5,9 @@ from django.contrib.auth.hashers import make_password
 from django.core.mail import send_mail
 import random
 import string
+from django.db import models
+from django.contrib.auth.models import User  # Django's built-in User model
+from django.utils.timezone import now
 
 class SoftDelete(models.Model):
     is_deleted = models.BooleanField(default=False)
@@ -251,3 +254,18 @@ class TimeRecord(SoftDelete, models.Model):
 
     def __str__(self):
         return f"TimeRecord for {self.employee} on {self.date}"
+
+class ActivityLog(models.Model):
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)  # Admins
+    employee = models.ForeignKey(Employee, null=True, blank=True, on_delete=models.CASCADE)  # Employees
+    action = models.CharField(max_length=255)  # Description of action
+    timestamp = models.DateTimeField()  # Set manually using NTP time
+
+    def __str__(self):
+        if self.user and self.user.is_superuser:
+            return f"Admin {self.user.username} - {self.action} at {self.timestamp}"
+        elif self.employee:
+            return f"Employee {self.employee.username} - {self.action} at {self.timestamp}"
+        return f"Unknown User - {self.action} at {self.timestamp}"
+
+
