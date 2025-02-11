@@ -57,46 +57,28 @@ class Employee(SoftDelete, models.Model):
     
     objects = EmployeeManager()
     
-
     def generate_next_id(self):
-        year = self.joined_date.year
+        if not self.pk:  
+            return None
 
         if self.employee_type == 'Intern':
-            prefix = f"OJT-{year}-"
-            existing_ids = Employee._base_manager.filter(
-                username__startswith=prefix
-            ).values_list('username', flat=True)
-            
-            numbers = [
-                int(username.split('-')[-1]) 
-                for username in existing_ids 
-                if username.split('-')[-1].isdigit()
-            ]
-            next_number = max(numbers, default=0) + 1
-            return f"{prefix}{next_number:03d}"
-
+            return f"OJT-{self.joined_date.year}-{self.pk:02d}"
         elif self.employee_type == 'Employee':
-            prefix = "M-100-"
-            existing_ids = Employee._base_manager.filter(
-                username__startswith=prefix
-            ).values_list('username', flat=True)
-            
-            numbers = [
-                int(username.split('-')[-1]) 
-                for username in existing_ids 
-                if username.split('-')[-1].isdigit()
-            ]
-            next_number = max(numbers, default=0) + 1
-            return f"{prefix}{next_number:02d}"
+            return f"M-100-{self.pk:02d}"
+
 
     def save(self, *args, **kwargs):
-        if not self.username:
+        is_new = self._state.adding 
+        super().save(*args, **kwargs) 
+
+        if is_new:  
             self.username = self.generate_next_id()
+            super().save(update_fields=['username'])  
 
         if not self.password:
             self.password = make_password(self.username)
+            super().save(update_fields=['password'])  
 
-        super().save(*args, **kwargs)
     
     def generate_reset_code(self):
             code = ''.join(random.choices(string.digits, k=6))
