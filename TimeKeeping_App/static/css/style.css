@@ -335,12 +335,11 @@ html, body {
 }
 
 .sorry-area {
-    padding-top: 100px;
-    padding-bottom: 100px;
+    padding-top: 20px;
 }
 
 .sorry-img {
-    width: 40%;
+    width: 20%;
 }
 
 .add-employee-modal {
@@ -399,8 +398,28 @@ html, body {
     border-radius: 7px;
 }
 
-.login-copyright {
+.card-header-custom {
+    padding: .6rem 1rem !important;
+}
+
+.card-body-custom {
+    font-size: 0.9rem !important;
+    padding: 0.7rem !important;
+}
+
+.login-copyright-1 {
+    font-size: 0.8rem;
+}
+
+a.login-copyright-2 {
+    font-weight:400;
     font-size: 13px;
+    list-style-type: none;
+}
+
+a.login-copyright-2:hover {
+    text-decoration: none;
+    font-weight: bold;
 }
 
 @media (max-width: 1371px) {

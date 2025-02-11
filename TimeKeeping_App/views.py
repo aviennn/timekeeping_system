@@ -20,7 +20,20 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, Paragraph
-
+from django.http import HttpResponse
+from datetime import datetime
+from django.templatetags.static import static
+from django.conf import settings
+import os
+import requests
+import pandas as pd
+from .forms import EmployeeCreationForm
+from .models import Employee
+from django.contrib import messages  
+from django.contrib import messages
+from django.contrib.auth.hashers import check_password, make_password
+from django.utils import timezone
+from .forms import ChangePasswordForm, ResetPasswordEmailForm, ResetPasswordForm
 from .models import Employee, TimeRecord
 from .forms import (
     EmployeeCreationForm, ChangePasswordForm, ResetPasswordEmailForm,
@@ -62,7 +75,7 @@ def dashboard(request):
 
     if request.method == 'POST':
         if not current_employee:  # Login process
-            username = request.POST.get('username')
+            username_or_email = request.POST.get('username')
             password = request.POST.get('password')
             recaptcha_response = request.POST.get('g-recaptcha-response')
 
@@ -79,22 +92,27 @@ def dashboard(request):
                     'current_datetime': current_time,
                 })
 
-            if username and password:
-                try:
-                    employee = Employee.objects.get(username=username)
+            if username_or_email and password:
+                employee = Employee.objects.filter(username=username_or_email).first()
+                
+                if not employee:
+                    employee = Employee.objects.filter(email=username_or_email).first()
+
+                if employee:
                     if check_password(password, employee.password):
-                        current_employee = employee
                         request.session['current_employee_id'] = employee.id
                         return redirect('dashboard')
                     else:
                         error_message = 'Incorrect password. Please try again.'
-                except Employee.DoesNotExist:
-                    error_message = 'Username not found. Please check your credentials.'
+                else:
+                    error_message = 'Username or email not found. Please check your credentials.'
+
+
 
         if current_employee:  # Handle clock-in, clock-out, and lunch toggle
             action = request.POST.get('action')
             if action:
-                current_time = get_current_time()
+                #current_time = get_current_time()
                 today = current_time.date()
 
                 latest_record = TimeRecord.objects.filter(
@@ -140,6 +158,7 @@ def dashboard(request):
                         date=today,
                         clock_in=current_time.time()
                     )
+    reset_success = request.session.pop('reset_success', None)
 
     # Update user status
     status = "Awaiting Status"
@@ -167,7 +186,8 @@ def dashboard(request):
         'current_datetime': current_time,
         'status': status,
         'lunch_button_label': lunch_button_label,
-        'error_message': error_message
+        'error_message': error_message,
+        'reset_success': reset_success
     })
 
 def format_time(time_value):
@@ -253,29 +273,22 @@ def export_pdf(request, pk):
             records = TimeRecord.objects.filter(employee=current_employee).order_by('date')
 
         # Logo and title drawing code
-        icon_path = os.path.join(settings.BASE_DIR, 'TimeKeeping_App', 'static', 'images', 'icon-3.jpg')
+        icon_path = os.path.join(settings.BASE_DIR, 'TimeKeeping_App', 'static', 'images', 'gc-6.jpg')
         icon_x = margin
         icon_y = page_height - margin - 14
 
-        p.setFont("Helvetica-Bold", 24)
-        title_text = "Academe TS"
-        title_width = p.stringWidth(title_text, "Helvetica-Bold", 24)
-        title_x = (page_width - title_width) / 2
-
         spacing = 5
-        image_width = 42
-        title_width = p.stringWidth(title_text, "Helvetica-Bold", 31)
-        total_width = image_width + spacing + title_width
+        image_width = 130
+        total_width = image_width + spacing
         start_x = (page_width - total_width) / 2
         text_y = page_height - margin - 6
 
         p.drawImage(icon_path, start_x, icon_y, width=image_width, height=30)
-        p.drawString(start_x + image_width + spacing, text_y, title_text)
 
         p.setFont("Helvetica", 12)
-        subtitle_text = "GOCLOUD Asia, Inc."
+        subtitle_text = "Timekeeping System"
         subtitle_width = p.stringWidth(subtitle_text, "Helvetica", 12)
-        subtitle_y_position = page_height - margin - 25
+        subtitle_y_position = page_height - margin - 30
         p.drawString((page_width - subtitle_width) / 2, subtitle_y_position, subtitle_text)
 
         # Employee name
@@ -599,21 +612,22 @@ def create_employee(request):
         form = EmployeeCreationForm(request.POST)
         if form.is_valid():
             email = form.cleaned_data.get('email')
-            # Check for existing non-deleted email before saving
-            if Employee.objects.filter(email=email, is_deleted=False).exists():
-                form.add_error('email', 'This email is already registered to an inaactive account.')
+            # Check ALL existing emails, including deleted ones
+            if Employee.objects.filter(email=email).exists():
+                form.add_error('email', 'This email is already registered. Please use a different email address.')
             else:
                 try:
-                    # Set is_deleted=False explicitly when creating
                     employee = form.save(commit=False)
                     employee.is_deleted = False
                     employee.save()
                     messages.success(request, "Employee created successfully!")
                     return redirect("admin_dashboard")
                 except Exception as e:
-                    form.add_error('email', 'This email is already registered to an inactive account.')
+                    messages.error(request, f"An error occurred: {str(e)}")
+        else:
+            print(form.errors)  
 
-        messages.error(request, "Failed to create employee. Please fix the errors in the form.")
+        messages.warning(request, "Failed to create employee. Please fix the errors in the form.")
     else:
         form = EmployeeCreationForm()
 
@@ -624,6 +638,36 @@ def create_employee(request):
         "is_authenticated": request.user.is_authenticated 
     })
 
+@login_required(login_url='admin_dashboard')
+def edit_employee(request, employee_id):
+    employee = get_object_or_404(Employee, id=employee_id)
+
+    if request.method == "POST":
+        form = EmployeeEditForm(request.POST, instance=employee)
+        if form.is_valid():
+            email = form.cleaned_data.get('email')
+
+            # ✅ Fix: Allow current employee to keep their email
+            if Employee.objects.filter(email=email).exclude(id=employee.id).exists():
+                form.add_error('email', 'This email is already registered. Please use a different email address.')
+            else:
+                try:
+                    form.save()
+                    messages.success(request, "Employee updated successfully!")
+                    return redirect("view_user_info", employee_id=employee.id)
+                except Exception as e:
+                    messages.error(request, f"An error occurred: {str(e)}")
+        else:
+            print(form.errors)  
+
+        messages.error(request, "Failed to update employee. Please fix the errors in the form.")
+    else:
+        form = EmployeeEditForm(instance=employee)
+
+    return render(request, "view_user_info.html", {
+        "form": form,
+        "employee": employee
+    })
 
 def create_timerecord(request, pk):
     employee = get_object_or_404(Employee, id=pk)  
@@ -719,8 +763,6 @@ def change_password(request):
     })
 
 def forgot_password(request):
-    error_message = None
-
     if request.method == 'POST':
         form = ResetPasswordEmailForm(request.POST)
         if form.is_valid():
@@ -730,21 +772,20 @@ def forgot_password(request):
                 reset_code = employee.generate_reset_code()
                 request.session['reset_email'] = email
                 
+                # Store success message and redirect to reset_password
                 messages.success(request, 'Reset code has been sent to your email.')
-                return redirect('reset_password')
+                return redirect('reset_password')  # Redirects user to reset_password.html
+
             except Employee.DoesNotExist:
-                error_message = 'No account found with this email.'
+                messages.error(request, 'No account found with this email.')
+                return redirect('forgot_password')
+
     else:
         form = ResetPasswordEmailForm()
 
-    return render(request, 'forgot_password.html', {
-        'form': form,
-        'error_message': error_message
-    })
+    return render(request, 'forgot_password.html', {'form': form})
 
 def reset_password(request):
-    error_message = None
-
     if 'reset_email' not in request.session:
         messages.error(request, 'Please provide your email first.')
         return redirect('forgot_password')
@@ -762,30 +803,33 @@ def reset_password(request):
                 employee = Employee.objects.get(
                     email=email,
                     reset_code=code,
-                    reset_code_expiry__gt=get_current_time()
+                    reset_code_expiry__gt=timezone.now()
                 )
 
                 if new_password != confirm_password:
-                    error_message = 'Passwords do not match.'
-                else:
-                    employee.password = make_password(new_password)
-                    employee.reset_code = None
-                    employee.reset_code_expiry = None
-                    employee.save()
+                    messages.error(request, 'Passwords do not match.')
+                    return redirect('reset_password')
 
-                    del request.session['reset_email']
-                    messages.success(request, 'Password reset successfully!')
-                    return redirect('dashboard')
+                employee.password = make_password(new_password)
+                employee.reset_code = None
+                employee.reset_code_expiry = None
+                employee.save()
+
+                del request.session['reset_email']
+
+                # Store success message in session instead of Django messages
+                request.session['reset_success'] = 'Password reset successfully! You can now log in.'
+
+                return redirect('dashboard')  # Redirect to dashboard
 
             except Employee.DoesNotExist:
-                error_message = 'Invalid or expired reset code.'
+                messages.error(request, 'Invalid or expired reset code.')
+                return redirect('reset_password')
+
     else:
         form = ResetPasswordForm()
 
-    return render(request, 'reset_password.html', {
-        'form': form,
-        'error_message': error_message
-    })
+    return render(request, 'reset_password.html', {'form': form})
     
 
 def change_employee_password(request, employee_id):

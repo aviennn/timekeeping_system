@@ -2,9 +2,9 @@
 
 {% block title %}
     {% if user.is_authenticated %}
-        {{ user.username }} | Academe TS
+        {{ user.username }} | GOCLOUD Timekeeping System
     {% else %}
-        Log In (Admin) | Academe TS
+        Log In (Admin) | GOCLOUD Timekeeping System
     {% endif %}
 {% endblock %}
 
@@ -13,8 +13,7 @@
         <nav class="navbar navbar-dark navbar-expand-lg navbar-custom">
             <div class="container-fluid">
                 <div class="nav-logo navbar-brand">
-                    <img src="/static/images/icon-1.png" width="42" height="30" class="align-top">
-                    <span class="h3">Academe TS</span>
+                    <img src="/static/images/gc-logo-8.png" height="52" class="align-top">
                 </div>
 
                 <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
@@ -55,15 +54,19 @@
             <img src="/static/images/3d-3.png">
         </div>
         {% if messages %}
-        <div class="alert-danger error-message text-center">
-            {% for message in messages %}
-                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
-                    <i class="fas fas fa-times-circle"></i> {{ message }}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-            {% endfor %}
+        <div class="d-flex justify-content-center">
+            <div class="error-message text-center">
+                {% for message in messages %}
+                    <div class="alert
+                                alert-{{ message.tags }}
+                                alert-dismissible fade show" role="alert">
+                        <i class="fas fa-info-circle"></i> {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                {% endfor %}
+            </div>
         </div>
     {% endif %}
         <div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-labelledby="addEmployeeModalLabel" aria-hidden="true">
@@ -86,11 +89,21 @@
                             {% csrf_token %}
                             
                             {% if form.non_field_errors %}
-                                <div class="alert alert-danger error-message text-center">
-                                    <i class="fas fa-times-circle"></i> {{ form.non_field_errors }}
-                                </div>
+                                <div class="d-flex justify-content-center">   
+                                    <div class="alert alert-danger error-message text-center">
+                                        <i class="fas fa-times-circle"></i> {{ form.non_field_errors }}
+                                    </div>
+                                </div> 
                             {% endif %}
-                    
+                        
+                            <div class="form-group">
+                                <label class="font-weight-bold text-secondary" for="employee_type">Employee Type</label>
+                                <select name="employee_type" class="form-control">
+                                    <option value="Employee">Employee</option>
+                                    <option value="Intern">Intern</option>
+                                </select>
+                            </div>                            
+                        
                             <div class="form-group">
                                 <label class="font-weight-bold text-secondary" for="first_name">First Name</label>
                                 <input type="text" class="form-control {% if form.first_name.errors %}is-invalid{% endif %}" name="first_name" value="{{ form.first_name.value }}" required>
@@ -98,7 +111,7 @@
                                     <div class="invalid-feedback">{{ error }}</div>
                                 {% endfor %}
                             </div>
-                    
+                        
                             <div class="form-group">
                                 <label class="font-weight-bold text-secondary" for="middle_name">Middle Name</label>
                                 <input type="text" class="form-control {% if form.middle_name.errors %}is-invalid{% endif %}" name="middle_name" value="{{ form.middle_name.value }}">
@@ -106,7 +119,7 @@
                                     <div class="invalid-feedback">{{ error }}</div>
                                 {% endfor %}
                             </div>
-                    
+                        
                             <div class="form-group">
                                 <label class="font-weight-bold text-secondary" for="last_name">Last Name</label>
                                 <input type="text" class="form-control {% if form.last_name.errors %}is-invalid{% endif %}" name="last_name" value="{{ form.last_name.value }}" required>
@@ -114,24 +127,17 @@
                                     <div class="invalid-feedback">{{ error }}</div>
                                 {% endfor %}
                             </div>
-                    
-                            <div class="form-group">
+                        
+                            <div class="form-group mb-4">
                                 <label class="font-weight-bold text-secondary" for="email">Email</label>
                                 <input type="email" class="form-control {% if form.email.errors %}is-invalid{% endif %}" name="email" value="{{ form.email.value }}" required>
                                 {% for error in form.email.errors %}
                                     <div class="invalid-feedback">{{ error }}</div>
                                 {% endfor %}
                             </div>
-                    
-                            <div class="form-group mb-4">
-                                <label class="font-weight-bold text-secondary" for="joined_date">Join Date</label>
-                                <input type="date" class="form-control {% if form.joined_date.errors %}is-invalid{% endif %}" name="joined_date" value="{{ form.joined_date.value }}" required>
-                                {% for error in form.joined_date.errors %}
-                                    <div class="invalid-feedback">{{ error }}</div>
-                                {% endfor %}
-                            </div>
+                        
                             <hr class="mt-4">
-                    
+                        
                             <div class="mx-3 d-flex justify-content-center">
                                 <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Create Employee</button>
                             </div>
@@ -211,50 +217,25 @@
         </div>
     {% else %}
         {% if error_message %}
-            <div class="alert alert-danger text-center">
-                <i class="fas fas fa-times-circle"></i> {{ error_message }}
+            <div class="d-flex justify-content-center">
+                <div class="alert alert-danger text-center">
+                    <i class="fas fas fa-times-circle"></i> {{ error_message }}
+                </div>
             </div>
         {% endif %}
 
-        <!--<div class="container">
-            <div class="col-md-6 offset-md-3">
-                <h2 class="text-center text-dark mt-5">Admin</h2>
-                <div class="text-center mb-3 text-dark">Please log in to continue.</div>
-
-                   
-                    <form class="card-body cardbody-color p-lg-5" method="post" action="{% url 'admin_dashboard' %}">
-                        {% csrf_token %}
-                        <div class="input-group mb-3 login-username-container">
-                            <input type="text" class="form-control" name="username" placeholder="Enter Username" required>
-                        </div>
-                        <div class="input-group mb-3 login-password-container">
-                            <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
-                            <div class="input-group-append login-eye-icon">
-                                <i id="eye-icon" class="fas fa-eye-slash toggle-password" onclick="togglePassword()"></i>
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mt-2">
-                            <a href="{% url 'forgot_password' %}" class="forgot-password">Forgot Password?</a>
-                        </div>
-                        <div class="g-recaptcha" data-sitekey="6LfU480qAAAAAOP544VCY6VRhtcax-nJEO_ct9p3"></div>
-                        <button type="submit" class="btn btn-primary btn-block login-button">Login</button>
-                    </form>
-                </div>
-            </div>
-        </div>-->
-
-        <div style="margin-top: 8%;">
+        <div style="margin-top: 9%;">
             <div class="login-form-custom d-flex justify-content-center">
                 <div class="row">
                     <div class="login-form-custom-container col-xl-6 shadow">
-                        <img class="login-logo mt-2 mb-4" src="/static/images/ats-2.png">
+                        <img class="login-logo mt-2 mb-4" src="/static/images/gocloud.png">
                         
                         <div class="mb-4">
                             <p>Please log in to continue.</p>
                         </div>
     
                         <div class="mb-5 text-center">
-                            <span class="status-text-area-3 h5 py-3 px-2">
+                            <span class="status-text-area-2 h5 py-3 px-2">
                                 <span class="status-icon text-secondary"><i class="fas fa-user-cog"></i></span> <span class="py-2 px-3 status-text text-secondary">
                                     Admin
                                 </span>
@@ -275,10 +256,6 @@
                                     </button>
                                 </div>
                             </div>
-                            
-                            <!-- <div class="d-flex justify-content-center mt-2">
-                                <a href="{% url 'forgot_password' %}">Forgot Password?</a>
-                            </div> -->
     
                             <div style="transform:scale(1.0);" class="g-recaptcha mt-3" data-sitekey="6LfU480qAAAAAOP544VCY6VRhtcax-nJEO_ct9p3"></div>
                             
@@ -288,14 +265,16 @@
                             <hr>
                             
                             <div class="d-flex justify-content-center mb-1">
-                                <a href="https://gocloudgroup.com/">
-                                    <img class="login-logo-2" src="/static/images/gocloud.png">
+                                <span class="text-center text-secondary login-copyright-1">
+                                    &copy; 2025&nbsp;
+                                </span>
+
+                                <a href="https://gocloudgroup.com/" class="login-copyright-2">                                    
+                                    <span class="text-center text-secondary">
+                                        GOCLOUD Inc.
+                                    </span>
                                 </a>
                             </div>
-    
-                            <h6 class="login-copyright text-center text-secondary font-weight-normal">
-                                &copy; 2025 GOCLOUD Inc.
-                            </h6>
                         </form>
                     </div>
                     
@@ -335,7 +314,6 @@
                 <div class="footer-content-area text-center p-3">
 
                     <div class="footer-logos d-flex justify-content-center mt-2 mb-2">
-                        <img src="/static/images/ats.png" alt="ATS Logo" class="logo-img-ats mt-3 mx-2">
                         <img src="/static/images/gc.png" alt="GC Logo" class="logo-img-gc mt-2 mx-2">
                     </div>
 

@@ -8,8 +8,7 @@
     <nav class="navbar navbar-dark navbar-expand-lg navbar-custom">
         <div class="container-fluid">
             <div class="nav-logo navbar-brand">
-                <img src="/static/images/icon-1.png" width="42" height="30" class="align-top">
-                <span class="h3">Academe TS</span>
+                <img src="/static/images/gc-logo-8.png" height="52" class="align-top">
             </div>
 
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
@@ -55,56 +54,56 @@
 
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-xl-5">
+            <div class="col-xl-4">
                 <div class="user-info">
-                    <div class="card-header" style="background-color: rgb(255 255 255 / 3%);">
+                    <div class="card-header card-header-custom" style="background-color: rgb(255 255 255 / 3%);">
                         <span class="h5 font-weight-bold text-secondary">First Name</span>
                     </div>
-                    <div class="card-body text-secondary">
+                    <div class="card-body card-body-custom text-secondary">
                         {{ employee.first_name }}
                     </div>
                 </div>
             </div>
     
-            <div class="col-xl-5">
+            <div class="col-xl-4">
                 <div class="user-info">
-                    <div class="card-header" style="background-color: rgb(255 255 255 / 3%);">
+                    <div class="card-header card-header-custom" style="background-color: rgb(255 255 255 / 3%);">
                         <span class="h5 font-weight-bold text-secondary">Middle Name</span>
                     </div>
-                    <div class="card-body text-secondary">
+                    <div class="card-body card-body-custom text-secondary">
                         {{ employee.middle_name }}
                     </div>
                 </div>
             </div>
     
-            <div class="col-xl-5">
+            <div class="col-xl-4">
                 <div class="user-info">
-                    <div class="card-header" style="background-color: rgb(255 255 255 / 3%);">
+                    <div class="card-header card-header-custom" style="background-color: rgb(255 255 255 / 3%);">
                         <span class="h5 font-weight-bold text-secondary">Last Name</span>
                     </div>
-                    <div class="card-body text-secondary">
+                    <div class="card-body card-body-custom text-secondary">
                         {{ employee.last_name }}
                     </div>
                 </div>
             </div>
     
-            <div class="col-xl-5">
+            <div class="col-xl-4">
                 <div class="user-info">
-                    <div class="card-header" style="background-color: rgb(255 255 255 / 3%);">
+                    <div class="card-header card-header-custom" style="background-color: rgb(255 255 255 / 3%);">
                         <span class="h5 font-weight-bold text-secondary">Email</span>
                     </div>
-                    <div class="card-body text-secondary">
+                    <div class="card-body card-body-custom text-secondary">
                         {{ employee.email }}
                     </div>
                 </div>
             </div>
     
-            <div class="col-xl-5">
+            <div class="col-xl-4">
                 <div class="user-info">
-                    <div class="card-header" style="background-color: rgb(255 255 255 / 3%);">
+                    <div class="card-header card-header-custom" style="background-color: rgb(255 255 255 / 3%);">
                         <span class="h5 font-weight-bold text-secondary">Date Joined</span>
                     </div>
-                    <div class="card-body text-secondary">
+                    <div class="card-body card-body-custom text-secondary">
                         {{ employee.joined_date }}
                     </div>
                 </div>
@@ -130,8 +129,12 @@
                         <img src="/static/images/3d-11.png" height="250">
                     </div>
 
-                    <form method="POST" action="{% url 'view_user_info' employee.id %}">
+                    <form method="POST" action="{% url 'edit_employee' employee.id %}">
                         {% csrf_token %}
+                            <div class="form-group">
+                                <label class="font-weight-bold text-secondary" for="{{ form.employee_type.id_for_label }}">Employee Type</label>
+                                {{ form.employee_type }}
+                            </div>
                             <div class="form-group">
                                 <label class="font-weight-bold text-secondary" for="{{ form.first_name.id_for_label }}">First Name</label>
                                 {{ form.first_name }}
@@ -154,7 +157,8 @@
         
                             <div class="form-group mb-4">
                                 <label class="font-weight-bold text-secondary" for="{{ form.joined_date.id_for_label }}">Join Date</label>
-                                {{ form.joined_date }}
+                                <input type="date" name="joined_date" id="{{ form.joined_date.id_for_label }}" 
+                                       class="form-control" value="{{ employee.joined_date|date:'Y-m-d' }}">
                             </div>
                         <hr class="mt-4">
                         
@@ -182,7 +186,6 @@
             <div class="footer-content-area text-center p-3">
 
                 <div class="footer-logos d-flex justify-content-center mt-2 mb-2">
-                    <img src="/static/images/ats.png" alt="ATS Logo" class="logo-img-ats mt-3 mx-2">
                     <img src="/static/images/gc.png" alt="GC Logo" class="logo-img-gc mt-2 mx-2">
                 </div>
 
