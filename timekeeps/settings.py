@@ -84,11 +84,10 @@ WSGI_APPLICATION = 'timekeeps.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv("DB_NAME", default=""), 
-        'USER': os.getenv("DB_USER", default=""),  
-        'PASSWORD': os.getenv("DB_USER_PASSWORD", default=""),  
-        'HOST': os.getenv("DB_HOST", default=""),  
-        'PORT': os.getenv("DB_DB_PORT", default=""),  
+        'HOST':'academe-lms-rds.c1wyxrttmsbt.ap-northeast-1.rds.amazonaws.com',
+        'USER':'root',
+        'PASSWORD':'!GoCloud2023$$$',
+        'NAME':'timekeeping_db',
     }
 }
 

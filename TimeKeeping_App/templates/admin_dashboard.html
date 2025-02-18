@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-
+{% load static %}
 {% block title %}
     {% if user.is_authenticated %}
         {{ user.username }} | GOCLOUD Timekeeping System
@@ -13,7 +13,7 @@
         <nav class="navbar navbar-dark navbar-expand-lg navbar-custom">
             <div class="container-fluid">
                 <div class="nav-logo navbar-brand">
-                    <img src="/static/images/gc-logo-8.png" height="52" class="align-top">
+                    <img src="{% static 'images/gc-logo-8.png' %}" height="52" class="align-top">
                 </div>
 
                 <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
@@ -272,7 +272,7 @@
             <div class="login-form-custom d-flex justify-content-center">
                 <div class="row">
                     <div class="login-form-custom-container col-xl-6 shadow">
-                        <img class="login-logo mt-2 mb-4" src="/static/images/gocloud.png">
+                        <img class="login-logo mt-2 mb-4" src="{% static 'images/gocloud.png' %}">
                         
                         <div class="mb-4">
                             <p>Please log in to continue.</p>
@@ -301,7 +301,7 @@
                                 </div>
                             </div>
     
-                            <div style="transform:scale(1.0);" class="g-recaptcha mt-3" data-sitekey="6LfU480qAAAAAOP544VCY6VRhtcax-nJEO_ct9p3"></div>
+                            <div style="transform:scale(1.0);" class="g-recaptcha mt-3" data-sitekey="6LfDstQqAAAAAFVK7FxuEZfq9JVJBEkjtUKsuAhQ"></div>
                             
                             <button class="login-button btn btn-success w-100 mt-4 mb-2 font-weight-bold" type="submit">
                                 <i class="fa fa-sign-in mr-1"></i> Log In
