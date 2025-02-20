@@ -168,33 +168,38 @@
             </div>
         </div>
 
-        {# Auto-logout script: triggers if the user is idle for 15 mins (For testing, change the values of the commented lines.) #}
+        {# Auto-logout script wrapped in an IIFE to ensure variables are defined in scope #}
         <script>
-            
-            var autoLogoutTimeout = 15 * 60 * 1000; // 15 minutes
+            (function() {
+                //var autoLogoutTimeout = 5000; // 5 seconds for testing
+                var autoLogoutTimeout = 15 * 60 * 1000; // 15 minutes in milliseconds
+                var logoutTimer;
 
-            function triggerLogout() {
-                // Create and insert a dismissible yellow alert bar with a close button
-                var alertBar = document.createElement('div');
-                alertBar.className = 'd-flex justify-content-center mt-3';
-                alertBar.innerHTML = '<div class="alert alert-warning alert-dismissible fade show error-message text-center" role="alert"><i class="fas fa-exclamation-triangle"></i> Session has expired. (Don\'t worry, your clock-in status will be saved.) <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-                document.body.prepend(alertBar);
+                function triggerLogout() {
+                    console.log("Auto-logout triggered.");
+                    var alertBar = document.createElement('div');
+                    alertBar.className = 'd-flex justify-content-center mt-3';
+                    alertBar.innerHTML = '<div class="alert alert-warning alert-dismissible fade show error-message text-center" role="alert"><i class="fas fa-exclamation-triangle"></i> Session has expired. (Don\'t worry, your clock-in status will be saved.) <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+                    document.body.prepend(alertBar);
+                    setTimeout(function () {
+                        window.location.href = "{% url 'dashboard' %}?session_timed_out=1";
+                    }, 1500);
+                }
 
-                // Redirect after 1.5 seconds to the dashboard with a session_timed_out flag
-                setTimeout(function() {
-                    window.location.href = "{% url 'dashboard' %}?session_timed_out=1";
-                }, 1500);
-            }
+                function resetLogoutTimer() {
+                    console.log("Resetting logout timer.");
+                    clearTimeout(logoutTimer);
+                    logoutTimer = setTimeout(triggerLogout, autoLogoutTimeout);
+                }
 
-            function resetLogoutTimer() {
-                clearTimeout(logoutTimer);
-                logoutTimer = setTimeout(triggerLogout, autoLogoutTimeout);
-            }
-
-            window.onload = resetLogoutTimer;
-            document.onmousemove = resetLogoutTimer;
-            document.onkeypress = resetLogoutTimer;
-            document.onclick = resetLogoutTimer;
+                window.addEventListener("load", function() {
+                    console.log("Auto-logout script loaded.");
+                    resetLogoutTimer();
+                });
+                document.addEventListener("mousemove", resetLogoutTimer);
+                document.addEventListener("keypress", resetLogoutTimer);
+                document.addEventListener("click", resetLogoutTimer);
+            })();
         </script>
     {% else %}
     
