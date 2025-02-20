@@ -22,7 +22,7 @@ from django.conf import settings
 import os
 import requests
 import pandas as pd
-from .forms import EmployeeCreationForm
+from .forms import EmployeeCreationForm, TimeRecordCreationForm, TimeRecordEditForm
 from .forms import EmployeeEditForm
 from .models import Employee
 from .models import ActivityLog
@@ -742,9 +742,16 @@ def edit_employee(request, employee_id):
         form = EmployeeEditForm(request.POST, instance=employee)
         if form.is_valid():
             email = form.cleaned_data.get('email')
+            username = form.cleaned_data.get('username')  # Get the new username input
             new_employee_type = form.cleaned_data.get('employee_type')
 
-            # Check for duplicate email including handling for a deleted record
+            # Check if the username already exists (excluding current user)
+            existing_username = Employee.objects.filter(username=username).exclude(id=employee.id).first()
+            if existing_username:
+                form.add_error('username', 'This username is already taken. Please choose a different one.')
+                show_modal = True
+
+            # Check if the email already exists (excluding current user)
             existing_employee = Employee.objects.filter(email=email).exclude(id=employee.id).first()
             if existing_employee:
                 if existing_employee.is_deleted:
@@ -752,25 +759,36 @@ def edit_employee(request, employee_id):
                 else:
                     form.add_error('email', 'This email is already registered. Please use a different email address.')
                 show_modal = True
-            else:
-                try:
-                    employee = form.save()
-                    log_activity(request.user, f"Edited Employee Information of {employee.username}")
 
-                    # Update username and password if an Intern becomes an Employee
-                    if old_employee_type == 'Intern' and new_employee_type == 'Employee':
-                        new_username = f"M-100-{employee.pk:02d}"
-                        employee.username = new_username
-                        employee.password = make_password(new_username)
-                        employee.save()
+            # If there are errors, re-render the form with messages
+            if form.errors:
+                return render(request, "view_user_info.html", {
+                    "form": form,
+                    "employee": employee,
+                    "show_modal": show_modal,
+                })
 
-                    messages.success(request, "User updated successfully!")
-                    if old_employee_type != new_employee_type:
-                        messages.info(request, f"Username and password have been updated to: {employee.username}")
-                    return redirect("view_user_info", employee_id=employee.id)
-                except Exception as e:
-                    form.add_error(None, f"An error occurred: {str(e)}")
-                    show_modal = True
+            try:
+                employee = form.save()
+                log_activity(request.user, f"Edited Employee Information of {employee.username}")
+
+                # Handle Intern to Employee conversion
+                if old_employee_type == 'Intern' and new_employee_type == 'Employee':
+                    employee.employee_type = 'Employee'
+                    new_username = employee.generate_next_id()
+                    employee.username = new_username
+                    employee.password = make_password(new_username)
+                    employee.save(update_fields=['username', 'password', 'employee_type'])
+
+                    messages.info(request, f"Username and password have been updated to: {employee.username}")
+
+                # Ensure success message shows for any update, not just employee_type changes
+                messages.success(request, "User information updated successfully!")
+                return redirect("view_user_info", employee_id=employee.id)
+
+            except Exception as e:
+                form.add_error(None, f"An error occurred: {str(e)}")
+                show_modal = True
         else:
             print(form.errors)
             show_modal = True

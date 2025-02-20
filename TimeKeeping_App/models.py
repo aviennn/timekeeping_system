@@ -5,7 +5,7 @@ from django.contrib.auth.hashers import make_password
 from django.core.mail import send_mail
 import random
 import string
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import User  # Django's built-in User model
 from django.utils.timezone import now
 
@@ -22,67 +22,77 @@ class SoftDelete(models.Model):
 
     def delete(self, *args, **kwargs):
         self.soft_delete()
-        
+
     class Meta:
         abstract = True
-        '''
-        constraints = [
-            models.UniqueConstraint(
-                fields=['email'],
-                condition=models.Q(is_deleted=False),
-                name='unique_active_email'
-            )
-        ]
-        '''
 class EmployeeManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(is_deleted=False)
 
+class EmployeeCounter(models.Model):
+    year = models.IntegerField(null=True, blank=True)  # Only used for Interns
+    employee_type = models.CharField(max_length=10)  
+    counter = models.IntegerField(default=0)  
 
+    class Meta:
+        unique_together = ("year", "employee_type")
+        
 class Employee(SoftDelete, models.Model):
     EMPLOYEE_TYPE_CHOICES = [
         ('Employee', 'Employee'),
         ('Intern', 'Intern'),
     ]
-        
+
     first_name = models.CharField(max_length=50)
     middle_name = models.CharField(max_length=50, null=True, blank=True)
     last_name = models.CharField(max_length=50)
     email = models.EmailField(unique=True)
     joined_date = models.DateField(default=timezone.now)
-    employee_type = models.CharField(max_length=10, choices=EMPLOYEE_TYPE_CHOICES)
-    username = models.CharField(max_length=100, unique=True, editable=False)
+    employee_type = models.CharField(max_length=10, choices=EMPLOYEE_TYPE_CHOICES, null=True)
+    username = models.CharField(max_length=100, unique=True, editable=True)
     password = models.CharField(max_length=100)
+    yearly_counter = models.PositiveIntegerField(default=1)  # Track yearly increment
     reset_code = models.CharField(max_length=6, null=True, blank=True)
     reset_code_expiry = models.DateTimeField(null=True, blank=True)
-    is_deleted = models.BooleanField(default=False)
 
-    
     objects = EmployeeManager()
-    
+
     def generate_next_id(self):
-        if not self.pk:  
-            return None
+        """
+        - Employees (M-100-000) have a continuously increasing counter.
+        - Interns (OJT-YYYY-000) reset yearly.
+        """
+        year = self.joined_date.year if self.employee_type == 'Intern' else None  
 
         if self.employee_type == 'Intern':
-            return f"OJT-{self.joined_date.year}-{self.pk:02d}"
-        elif self.employee_type == 'Employee':
-            return f"M-100-{self.pk:02d}"
+            prefix = f"OJT-{year}-"
+        else:
+            prefix = "M-100-"
+
+        with transaction.atomic():
+            counter, created = EmployeeCounter.objects.get_or_create(
+                defaults={"counter": 0}, 
+                year=year, 
+                employee_type=self.employee_type
+            )
+
+            counter.counter += 1  
+            counter.save()
+
+            return f"{prefix}{counter.counter:03d}"
 
 
     def save(self, *args, **kwargs):
-        is_new = self._state.adding 
-        super().save(*args, **kwargs) 
-
-        if is_new:  
+        """Ensure the username is assigned only once."""
+        if not self.username:  
             self.username = self.generate_next_id()
-            super().save(update_fields=['username'])  
+
+        super().save(*args, **kwargs) 
 
         if not self.password:
             self.password = make_password(self.username)
             super().save(update_fields=['password'])  
-
-    
+            
     def generate_reset_code(self):
             code = ''.join(random.choices(string.digits, k=6))
             self.reset_code = code
@@ -110,7 +120,6 @@ class TimeRecord(SoftDelete, models.Model):
     clock_out = models.TimeField(null=True, blank=True)
     lunch_start = models.TimeField(null=True, blank=True)
     lunch_end = models.TimeField(null=True, blank=True)
-    is_deleted = models.BooleanField(default=False)
 
     
     objects = TimeRecordManager()
