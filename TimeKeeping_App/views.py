@@ -22,7 +22,7 @@ from django.conf import settings
 import os
 import requests
 import pandas as pd
-from .forms import EmployeeCreationForm
+from .forms import EmployeeCreationForm, TimeRecordCreationForm, TimeRecordEditForm
 from .forms import EmployeeEditForm
 from .models import Employee
 from .models import ActivityLog
@@ -91,15 +91,20 @@ def log_activity(user, action):
             )
     except Exception as e:
         print(f"Error in log_activity: {e}")
-        
+  
 def dashboard(request):
-    #current_time = get_current_time()
+    # Detect session expiry via GET parameter or missing session key while a login flag was set.
+    error_message = None
+    if request.GET.get('session_timed_out') or (not request.session.get('current_employee_id') and request.session.get('was_logged_in')):
+        error_message = "Session has expired. (Don't worry, your clock-in status will be saved.)"
+        request.session.pop('was_logged_in', None)
+
+    # Set the current time using Manila timezone
     philippines_tz = pytz.timezone('Asia/Manila')
     current_time = timezone.now().astimezone(philippines_tz)
     current_employee = None
-    error_message = None
 
-    # Check if user is already logged in
+    # Check if the user is already logged in via session
     if 'current_employee_id' in request.session:
         try:
             current_employee = Employee.objects.get(id=request.session['current_employee_id'])
@@ -108,16 +113,20 @@ def dashboard(request):
             current_employee = None
 
     if request.method == 'POST':
-        if not current_employee:  # Login process
+        # If the user is not logged in, process the login
+        if not current_employee:
             username_or_email = request.POST.get('username')
             password = request.POST.get('password')
             recaptcha_response = request.POST.get('g-recaptcha-response')
 
             # Verify reCAPTCHA before login
-            recaptcha_verify = requests.post('https://www.google.com/recaptcha/api/siteverify', {
-                'secret': settings.RECAPTCHA_PRIVATE_KEY,
-                'response': recaptcha_response
-            }).json()
+            recaptcha_verify = requests.post(
+                'https://www.google.com/recaptcha/api/siteverify',
+                {
+                    'secret': settings.RECAPTCHA_PRIVATE_KEY,
+                    'response': recaptcha_response
+                }
+            ).json()
 
             if not recaptcha_verify.get('success'):
                 return render(request, 'dashboard.html', {
@@ -127,29 +136,27 @@ def dashboard(request):
                 })
 
             if username_or_email and password:
+                # Try to find the employee by username first, then by email
                 employee = Employee.objects.filter(username=username_or_email).first()
-                
                 if not employee:
                     employee = Employee.objects.filter(email=username_or_email).first()
 
                 if employee:
                     if check_password(password, employee.password):
                         request.session['current_employee_id'] = employee.id
-                        log_activity(employee, "Logged in")  # Log employee login
+                        request.session['was_logged_in'] = True  # Flag to detect expiry later
+                        log_activity(employee, "Logged in")
                         return redirect('dashboard')
                     else:
                         error_message = 'Incorrect password. Please try again.'
                 else:
                     error_message = 'Username or email not found. Please check your credentials.'
 
-
-
-        if current_employee:  # Handle clock-in, clock-out, and lunch toggle
+        # If the user is logged in, process clock actions
+        else:
             action = request.POST.get('action')
             if action:
-                #current_time = get_current_time()
                 today = current_time.date()
-
                 latest_record = TimeRecord.objects.filter(
                     employee=current_employee,
                     date=today
@@ -158,23 +165,25 @@ def dashboard(request):
                 create_new_record = False
 
                 if action == 'clock_in':
+                    # Allow clock in if there's no active record or the previous session is completed
                     if not latest_record or latest_record.clock_out:
                         create_new_record = True
                     else:
                         error_message = 'You have already clocked in. Please clock out from your previous session first.'
-                    
+
                 elif action == 'clock_out':
                     if not latest_record or (latest_record and not latest_record.clock_in):
-                        error_message = 'Please clock in first.'  #"Awaiting Status" and tries to clock out.
+                        error_message = 'Please clock in first.'
                     elif latest_record.clock_out:
-                        error_message = 'Please clock in first.'  #  locked out and tries to clock out again.
+                        error_message = 'You have already clocked out. Please clock in first.'
                     elif latest_record.lunch_start and not latest_record.lunch_end:
                         error_message = 'Please end your lunch break before clocking out.'
                     else:
                         latest_record.clock_out = current_time.time()
                         latest_record.save()
                         log_activity(current_employee, "Clocked out")
-                
+                        return redirect('dashboard')
+
                 elif action == 'lunch_toggle' and latest_record:
                     if not latest_record.clock_in or latest_record.clock_out:
                         error_message = 'Please clock in before starting your lunch break.'
@@ -183,10 +192,12 @@ def dashboard(request):
                         log_activity(current_employee, "Started lunch break")
                         latest_record.lunch_end = None
                         latest_record.save()
+                        return redirect('dashboard')
                     elif not latest_record.lunch_end:
                         latest_record.lunch_end = current_time.time()
                         log_activity(current_employee, "Ended lunch break")
                         latest_record.save()
+                        return redirect('dashboard')
                     else:
                         error_message = 'You have already taken your lunch break for today.'
 
@@ -197,13 +208,17 @@ def dashboard(request):
                         clock_in=current_time.time()
                     )
                     log_activity(current_employee, "Clocked in")
+                    return redirect('dashboard')
+
+    # Pop any reset success message from session
     reset_success = request.session.pop('reset_success', None)
 
-    # Update user status
+    # Determine current status and button label based on the latest time record
     status = "Awaiting Status"
     lunch_button_label = "Start Lunch"
+    time_records = []
+    today = current_time.date()
     if current_employee:
-        today = current_time.date()
         latest_record = TimeRecord.objects.filter(
             employee=current_employee,
             date=today
@@ -218,16 +233,23 @@ def dashboard(request):
             if latest_record.lunch_start and not latest_record.lunch_end:
                 lunch_button_label = "Stop Lunch"
 
-    return render(request, 'dashboard.html', {
+        time_records = TimeRecord.objects.filter(
+            employee=current_employee, 
+            date=today
+        ).order_by('-clock_in')
+
+    context = {
         'employees': Employee.objects.all(),
         'current_employee': current_employee,
-        'time_records': TimeRecord.objects.filter(employee=current_employee, date=today).order_by('-clock_in') if current_employee else [],
+        'time_records': time_records,
         'current_datetime': current_time,
         'status': status,
         'lunch_button_label': lunch_button_label,
         'error_message': error_message,
         'reset_success': reset_success
-    })
+    }
+
+    return render(request, 'dashboard.html', context)
 
 def format_time(time_value):
     if time_value:
@@ -720,9 +742,16 @@ def edit_employee(request, employee_id):
         form = EmployeeEditForm(request.POST, instance=employee)
         if form.is_valid():
             email = form.cleaned_data.get('email')
+            username = form.cleaned_data.get('username')  # Get the new username input
             new_employee_type = form.cleaned_data.get('employee_type')
 
-            # Check for duplicate email including handling for a deleted record
+            # Check if the username already exists (excluding current user)
+            existing_username = Employee.objects.filter(username=username).exclude(id=employee.id).first()
+            if existing_username:
+                form.add_error('username', 'This username is already taken. Please choose a different one.')
+                show_modal = True
+
+            # Check if the email already exists (excluding current user)
             existing_employee = Employee.objects.filter(email=email).exclude(id=employee.id).first()
             if existing_employee:
                 if existing_employee.is_deleted:
@@ -730,25 +759,36 @@ def edit_employee(request, employee_id):
                 else:
                     form.add_error('email', 'This email is already registered. Please use a different email address.')
                 show_modal = True
-            else:
-                try:
-                    employee = form.save()
-                    log_activity(request.user, f"Edited Employee Information of {employee.username}")
 
-                    # Update username and password if an Intern becomes an Employee
-                    if old_employee_type == 'Intern' and new_employee_type == 'Employee':
-                        new_username = f"M-100-{employee.pk:02d}"
-                        employee.username = new_username
-                        employee.password = make_password(new_username)
-                        employee.save()
+            # If there are errors, re-render the form with messages
+            if form.errors:
+                return render(request, "view_user_info.html", {
+                    "form": form,
+                    "employee": employee,
+                    "show_modal": show_modal,
+                })
 
-                    messages.success(request, "User updated successfully!")
-                    if old_employee_type != new_employee_type:
-                        messages.info(request, f"Username and password have been updated to: {employee.username}")
-                    return redirect("view_user_info", employee_id=employee.id)
-                except Exception as e:
-                    form.add_error(None, f"An error occurred: {str(e)}")
-                    show_modal = True
+            try:
+                employee = form.save()
+                log_activity(request.user, f"Edited Employee Information of {employee.username}")
+
+                # Handle Intern to Employee conversion
+                if old_employee_type == 'Intern' and new_employee_type == 'Employee':
+                    employee.employee_type = 'Employee'
+                    new_username = employee.generate_next_id()
+                    employee.username = new_username
+                    employee.password = make_password(new_username)
+                    employee.save(update_fields=['username', 'password', 'employee_type'])
+
+                    messages.info(request, f"Username and password have been updated to: {employee.username}")
+
+                # Ensure success message shows for any update, not just employee_type changes
+                messages.success(request, "User information updated successfully!")
+                return redirect("view_user_info", employee_id=employee.id)
+
+            except Exception as e:
+                form.add_error(None, f"An error occurred: {str(e)}")
+                show_modal = True
         else:
             print(form.errors)
             show_modal = True

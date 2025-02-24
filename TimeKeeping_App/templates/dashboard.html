@@ -68,8 +68,11 @@
 
         {% if error_message %}
             <div class="d-flex justify-content-center mt-3">
-                <div class="alert alert-warning error-message text-center">
+                <div class="alert alert-warning alert-dismissible fade show error-message text-center" role="alert">
                     <i class="fas fa-exclamation-triangle"></i> {{ error_message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
             </div>
         {% endif %}
@@ -86,48 +89,48 @@
             </div>
         {% endif %}
         
-            <div class="mt-5 mb-4 text-center {% if status == 'Clocked In' %}status-active{% elif status == 'Clocked Out' %}status-inactive{% else %}status-pending{% endif %}">
-                <span class="status-text-area-1 h5 py-3 px-2">
-                    <span class="status-icon text-secondary"><i class="fas fa-info-circle"></i></span> <span class="py-2 px-3 status-text text-secondary">{{ status }}</span>
+        <div class="mt-5 mb-4 text-center {% if status == 'Clocked In' %}status-active{% elif status == 'Clocked Out' %}status-inactive{% else %}status-pending{% endif %}">
+            <span class="status-text-area-1 h5 py-3 px-2">
+                <span class="status-icon text-secondary"><i class="fas fa-info-circle"></i></span> <span class="py-2 px-3 status-text text-secondary">{{ status }}</span>
+            </span>
+        </div>
+        
+        {% with latest_record=time_records.first %}
+        {% if latest_record and latest_record.lunch_start and not latest_record.lunch_end %}
+            <div class="mt-5 mb-5 text-center status-indicator lunch-active">
+                <span class="status-text-area-2 h5 py-3 px-2">
+                    <span class="status-icon text-secondary"><i class="fas fa-utensils"></i></span> <span class="py-2 px-3 status-text text-secondary">On Lunch Break</span>
                 </span>
             </div>
+        {% endif %}
+        {% endwith %}
         
-            {% with latest_record=time_records.first %}
-            {% if latest_record and latest_record.lunch_start and not latest_record.lunch_end %}
-                <div class="mt-5 mb-5 text-center status-indicator lunch-active">
-                    <span class="status-text-area-2 h5 py-3 px-2">
-                        <span class="status-icon text-secondary"><i class="fas fa-utensils"></i></span> <span class="py-2 px-3 status-text text-secondary">On Lunch Break</span>
+        <form method="post" class="px-0 pb-2">
+            {% csrf_token %}
+            <input type="hidden" name="employee" value="{{ current_employee.id }}">
+            <input type="hidden" name="password" value="{{ current_employee.password }}">
+
+            <div class="d-flex flex-column flex-md-row gap-2">
+                <button class="btn btn-lg btn-success px-4 pt-3 pb-2 m-1 flex-fill tall-btn success-custom" name="action" value="clock_in">
+                    <span class="h4">
+                        <i class="fas fa-door-open"></i> | <b>CLOCK IN</b>
                     </span>
-                </div>
-            {% endif %}
-            {% endwith %}
+                </button>
+
+                <button class="btn btn-lg btn-danger pt-3 pb-2 m-1 flex-fill tall-btn danger-custom" name="action" value="clock_out">
+                    <span class="h4">
+                        <i class="fas fa-door-closed"></i> | <b>CLOCK OUT</b>
+                    </span>
+                </button>
+
+                <button class="btn btn-lg btn-warning px-2 pt-3 pb-2 m-1 flex-fill text-uppercase tall-btn warning-custom" name="action" value="lunch_toggle">
+                    <span class="h4">
+                        <i class="fas fa-utensils"></i> | <b>{{ lunch_button_label }}</b>
+                    </span>
+                </button>
+            </div>
+        </form>
         
-            <form method="post" class="px-0 pb-2">
-                {% csrf_token %}
-                <input type="hidden" name="employee" value="{{ current_employee.id }}">
-                <input type="hidden" name="password" value="{{ current_employee.password }}">
-
-                <div class="d-flex flex-column flex-md-row gap-2">
-                    <button class="btn btn-lg btn-success px-4 pt-3 pb-2 m-1 flex-fill tall-btn success-custom" name="action" value="clock_in">
-                        <span class="h4">
-                            <i class="fas fa-door-open"></i> | <b>CLOCK IN</b>
-                        </span>
-                    </button>
-
-                    <button class="btn btn-lg btn-danger pt-3 pb-2 m-1 flex-fill tall-btn danger-custom" name="action" value="clock_out">
-                        <span class="h4">
-                            <i class="fas fa-door-closed"></i> | <b>CLOCK OUT</b>
-                        </span>
-                    </button>
-
-                    <button class="btn btn-lg btn-warning px-2 pt-3 pb-2 m-1 flex-fill text-uppercase tall-btn warning-custom" name="action" value="lunch_toggle">
-                        <span class="h4">
-                            <i class="fas fa-utensils"></i> | <b>{{ lunch_button_label }}</b>
-                        </span>
-                    </button>
-                </div>
-            </form>
-            
         <div class="card shadow mb-4">
             <div class="card-header bg-secondary py-3">
                 <h5 class="m-0 font-weight-bold text-light text-center">Time-in/Time-out Record</h5>
@@ -164,12 +167,49 @@
                 </div>
             </div>
         </div>
+
+        {# Auto-logout script wrapped in an IIFE to ensure variables are defined in scope #}
+        <script>
+            (function() {
+                //var autoLogoutTimeout = 5000; // 5 seconds for testing
+                var autoLogoutTimeout = 15 * 60 * 1000; // 15 minutes in milliseconds
+                var logoutTimer;
+
+                function triggerLogout() {
+                    console.log("Auto-logout triggered.");
+                    var alertBar = document.createElement('div');
+                    alertBar.className = 'd-flex justify-content-center mt-3';
+                    alertBar.innerHTML = '<div class="alert alert-warning alert-dismissible fade show error-message text-center" role="alert"><i class="fas fa-exclamation-triangle"></i> Session has expired. (Don\'t worry, your clock-in status will be saved.) <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+                    document.body.prepend(alertBar);
+                    setTimeout(function () {
+                        window.location.href = "{% url 'dashboard' %}?session_timed_out=1";
+                    }, 1500);
+                }
+
+                function resetLogoutTimer() {
+                    console.log("Resetting logout timer.");
+                    clearTimeout(logoutTimer);
+                    logoutTimer = setTimeout(triggerLogout, autoLogoutTimeout);
+                }
+
+                window.addEventListener("load", function() {
+                    console.log("Auto-logout script loaded.");
+                    resetLogoutTimer();
+                });
+                document.addEventListener("mousemove", resetLogoutTimer);
+                document.addEventListener("keypress", resetLogoutTimer);
+                document.addEventListener("click", resetLogoutTimer);
+            })();
+        </script>
     {% else %}
     
     {% if error_message %}
         <div class="d-flex justify-content-center mt-3">
-            <div class="alert alert-warning error-message text-center">
+            <div class="alert alert-warning alert-dismissible fade show error-message text-center" role="alert">
                 <i class="fas fa-exclamation-triangle"></i> {{ error_message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
         </div>
     {% endif %}
